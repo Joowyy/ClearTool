@@ -11,6 +11,7 @@ from cleaner import (
     delete_folder_contents,
     delete_thumbcache,
     empty_recycle_bin,
+    format_size,
     run_command,
 )
 from dialogs import RecycleBinDialog
@@ -172,10 +173,9 @@ class App(tk.Tk):
             (C_INFO, C_INFO), (MUTED, MUTED),
         ]:
             self.log_widget.tag_config(tag, foreground=fg)
-        self.log_widget.tag_config(
-            "bold", font=(mono, 9, "bold"), foreground=TEXT
-        )
-        self.log_widget.tag_config("ts", foreground="#333333")
+        self.log_widget.tag_config("bold",    font=(mono, 9, "bold"), foreground=TEXT)
+        self.log_widget.tag_config("summary", font=(mono, 9, "bold"), foreground=ACCENT)
+        self.log_widget.tag_config("ts",      foreground="#333333")
 
     # ── Footer ────────────────────────────────────────────────────────
     def _footer(self):
@@ -224,8 +224,8 @@ class App(tk.Tk):
             w.configure(state="disabled")
         self.after(0, _do)
 
-    def _log_sep(self):
-        self._log("─" * 46, MUTED)
+    def _log_sep(self, char: str = "─"):
+        self._log(char * 46, MUTED)
 
     def _clear_log(self):
         self.log_widget.configure(state="normal")
@@ -234,22 +234,17 @@ class App(tk.Tk):
 
     # ── Diálogo papelera (hilo-seguro) ────────────────────────────────
     def _ask_recycle_bin(self) -> str:
-        """
-        Muestra el diálogo en el hilo principal usando wait_window(),
-        que es el patrón correcto de tkinter para modales.
-        El hilo de limpieza espera en done.wait() sin bloquear la UI.
-        """
         result: dict[str, str] = {"val": "skip"}
         done = threading.Event()
 
         def _show():
             dlg = RecycleBinDialog(self)
-            self.wait_window(dlg)      # ← procesa eventos de tkinter; no bloquea UI
+            self.wait_window(dlg)
             result["val"] = dlg.result
             done.set()
 
         self.after(0, _show)
-        done.wait()                    # ← sólo bloquea el hilo de limpieza
+        done.wait()
         return result["val"]
 
     # ── Limpieza ──────────────────────────────────────────────────────
@@ -274,83 +269,125 @@ class App(tk.Tk):
         self._log(f"LIMPIEZA INICIADA — {len(selected)} elemento(s)", "bold")
         self._log_sep()
 
-        total_del = total_lock = 0
+        stats: list[dict] = []
+
         for i, cat in enumerate(selected, 1):
             self._log(f"[{i}/{len(selected)}]  {cat['label']}", "bold")
-            d, l = self._process(cat)
-            total_del  += max(d, 0)
-            total_lock += l
+            d, l, freed = self._process(cat)
+            stats.append({
+                "label":   cat["label"],
+                "deleted": max(d, 0),
+                "locked":  l,
+                "freed":   freed,
+            })
 
-        self._log_sep()
-        self._log(
-            f"COMPLETADO  ·  Eliminados: {total_del}  ·  Bloqueados: {total_lock}",
-            C_OK if total_lock == 0 else C_WARN,
-        )
-        if total_lock:
-            self._log(
-                "Los archivos bloqueados están en uso. Se liberarán al reiniciar.", MUTED
-            )
-        self._log_sep()
-
+        self._show_summary(stats)
         self.after(0, lambda: self._set_running(False))
-        self.after(0, lambda: self.lbl_status.configure(
-            text=f"Completado — {total_del} eliminados · {total_lock} bloqueados"
-        ))
 
-    def _process(self, cat: dict) -> tuple[int, int]:
+    # ── Resumen detallado ─────────────────────────────────────────────
+    def _show_summary(self, stats: list[dict]):
+        total_deleted = sum(s["deleted"] for s in stats)
+        total_locked  = sum(s["locked"]  for s in stats)
+        total_freed   = sum(s["freed"]   for s in stats)
+
+        self._log_sep("═")
+        self._log("  RESUMEN DE LIMPIEZA", "summary")
+        self._log_sep("═")
+
+        for s in stats:
+            if s["deleted"] == 0 and s["freed"] == 0 and s["locked"] == 0:
+                self._log(f"  {s['label']}", MUTED)
+                self._log("    → Omitido o sin archivos que borrar.", MUTED)
+            else:
+                freed_str = format_size(s["freed"])
+                self._log(f"  {s['label']}", TEXT)
+                line = f"    → {s['deleted']} archivos  ·  {freed_str} liberados"
+                color = C_OK if s["locked"] == 0 else C_WARN
+                self._log(line, color)
+                if s["locked"] > 0:
+                    self._log(
+                        f"    ⚠  {s['locked']} bloqueados (en uso activo)",
+                        C_WARN,
+                    )
+
+        self._log_sep("═")
+        self._log(f"  ESPACIO TOTAL LIBERADO  →  {format_size(total_freed)}", "summary")
+        self._log(f"  Archivos eliminados     →  {total_deleted}", C_OK)
+        if total_locked:
+            self._log(
+                f"  Archivos bloqueados     →  {total_locked}  "
+                f"(se liberarán al reiniciar)",
+                C_WARN,
+            )
+        else:
+            self._log("  Sin archivos bloqueados  →  limpieza total", C_OK)
+        self._log_sep("═")
+
+        status = f"Liberado: {format_size(total_freed)}  ·  {total_deleted} archivos"
+        self.after(0, lambda: self.lbl_status.configure(text=status))
+
+    # ── Procesado por tipo ────────────────────────────────────────────
+    def _process(self, cat: dict) -> tuple[int, int, int]:
+        """Retorna (eliminados, bloqueados, bytes_liberados)."""
         t = cat["type"]
 
         if t == "folder":
-            total_d = total_l = 0
+            total_d = total_l = total_freed = 0
             for path in cat["paths"]:
                 self._log(f"    → {path}", MUTED)
-                d, l = delete_folder_contents(path)
+                d, l, freed = delete_folder_contents(path)
                 if d == -1:
                     self._log("      Ruta no encontrada, omitida.", MUTED)
                 else:
                     self._log(
-                        f"      ✓ {d} eliminados · {l} bloqueados",
+                        f"      ✓ {d} eliminados · {l} bloqueados · {format_size(freed)}",
                         C_OK if l == 0 else C_WARN,
                     )
-                    total_d += d
-                    total_l += l
-            return total_d, total_l
+                    total_d    += d
+                    total_l    += l
+                    total_freed += freed
+            return total_d, total_l, total_freed
 
         elif t == "thumbcache":
-            total_d = total_l = 0
+            total_d = total_l = total_freed = 0
             for path in cat["paths"]:
                 self._log(f"    → {path}", MUTED)
-                d, l = delete_thumbcache(path)
+                d, l, freed = delete_thumbcache(path)
                 if d == -1:
                     self._log("      Ruta no encontrada, omitida.", MUTED)
                 else:
-                    self._log(f"      ✓ {d} archivos eliminados", C_OK)
-                    total_d += d
-                    total_l += l
-            return total_d, total_l
+                    self._log(
+                        f"      ✓ {d} archivos · {format_size(freed)}", C_OK
+                    )
+                    total_d    += d
+                    total_l    += l
+                    total_freed += freed
+            return total_d, total_l, total_freed
 
         elif t == "recycle_bin":
             self._log("    → Esperando respuesta del usuario...", MUTED)
             action = self._ask_recycle_bin()
             if action == "delete":
-                ok = empty_recycle_bin()
+                ok, freed = empty_recycle_bin()
                 self._log(
-                    "      ✓ Papelera vaciada." if ok
+                    f"      ✓ Papelera vaciada · {format_size(freed)}" if ok
                     else "      ! Error al vaciar la papelera.",
                     C_OK if ok else C_WARN,
                 )
-                return (1, 0) if ok else (0, 0)
+                return (1, 0, freed) if ok else (0, 0, 0)
             else:
                 self._log("      — Omitido por el usuario.", MUTED)
-                return 0, 0
+                return 0, 0, 0
 
         elif t == "event_logs":
             self._log("    → Limpiando registros de eventos...", MUTED)
-            cleared, failed = clear_event_logs()
+            cleared, failed, freed = clear_event_logs()
             self._log(
-                f"      ✓ {cleared} registros limpiados · {failed} protegidos", C_OK
+                f"      ✓ {cleared} registros limpiados · {failed} protegidos "
+                f"· {format_size(freed)}",
+                C_OK,
             )
-            return cleared, failed
+            return cleared, failed, freed
 
         elif t == "command":
             self._log(f"    → {' '.join(cat['cmd'][:2])} ...", MUTED)
@@ -360,6 +397,6 @@ class App(tk.Tk):
                 else "      ! No disponible en este sistema",
                 C_OK if ok else C_WARN,
             )
-            return (1, 0) if ok else (0, 0)
+            return (1, 0, 0) if ok else (0, 0, 0)
 
-        return 0, 0
+        return 0, 0, 0
