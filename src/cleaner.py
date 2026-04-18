@@ -1,13 +1,32 @@
-"""Motor de limpieza con seguimiento de espacio liberado en disco."""
+"""Motor de limpieza — orquesta los .bat de src/scripts/ y mide espacio liberado."""
 
 import ctypes
-import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
-# ── Utilidades de formato ─────────────────────────────────────────────────────
+# ── Resolución robusta de SCRIPTS_DIR ────────────────────────────────────────
+def _resolve_scripts_dir() -> Path:
+    """
+    Devuelve la ruta a src/scripts/ sea cual sea la forma de lanzar la app:
+      · Exe compilado (PyInstaller --onefile):
+            __file__ apunta a _MEIPASS (temp). Usamos sys.executable para
+            encontrar el directorio real del .exe y bajamos a src/scripts/.
+      · Script Python directo (python src/main.py):
+            __file__ de cleaner.py es src/cleaner.py → parent = src/ → scripts/.
+    """
+    if getattr(sys, "frozen", False):
+        # Ejecutable compilado: exe está en la raíz del proyecto
+        return Path(sys.executable).parent / "src" / "scripts"
+    return Path(__file__).parent / "scripts"
 
+
+SCRIPTS_DIR      = _resolve_scripts_dir()
+CREATE_NO_WINDOW = 0x08000000   # evita que aparezca ventana cmd al llamar bats
+
+
+# ── Formato de tamaño ─────────────────────────────────────────────────────────
 def format_size(b: int) -> str:
     """Convierte bytes a string legible: B, KB, MB, GB, TB."""
     if b <= 0:
@@ -18,10 +37,9 @@ def format_size(b: int) -> str:
         b /= 1024
 
 
-# ── Helpers internos ──────────────────────────────────────────────────────────
-
+# ── Medición de disco ─────────────────────────────────────────────────────────
 def _get_size(path: Path) -> int:
-    """Tamaño total de un archivo o árbol de directorio en bytes."""
+    """Tamaño total de un archivo o árbol de directorios en bytes."""
     try:
         if path.is_file():
             return path.stat().st_size
@@ -37,89 +55,58 @@ def _get_size(path: Path) -> int:
         return 0
 
 
-def _take_ownership(path: str) -> None:
-    subprocess.run(
-        ["takeown", "/f", path, "/r", "/d", "y"],
-        capture_output=True, timeout=20,
-    )
-    subprocess.run(
-        ["icacls", path, "/grant", "Administrators:F", "/t", "/q"],
-        capture_output=True, timeout=20,
-    )
+def measure_paths(paths: list[str]) -> int:
+    """Suma el tamaño actual de todas las rutas dadas."""
+    return sum(_get_size(Path(p)) for p in paths)
 
 
-def _remove_item(item: Path) -> bool:
-    """Borra un archivo o carpeta. Si falla por permisos, toma ownership y reintenta."""
+# ── Ejecución de scripts ──────────────────────────────────────────────────────
+def run_bat(bat_name: str) -> tuple[bool, str]:
+    """
+    Ejecuta un .bat de src/scripts/ en silencio (sin ventana cmd).
+    Pasa /nopause para que el bat no espere tecla al final.
+    Devuelve (éxito, mensaje_error).
+    """
+    bat_path = SCRIPTS_DIR / bat_name
+    if not bat_path.exists():
+        return False, f"No encontrado en: {bat_path}"
     try:
-        shutil.rmtree(item) if item.is_dir() else item.unlink()
-        return True
-    except PermissionError:
-        try:
-            _take_ownership(str(item))
-            shutil.rmtree(item) if item.is_dir() else item.unlink()
-            return True
-        except Exception:
-            return False
-    except Exception:
-        return False
+        result = subprocess.run(
+            ["cmd", "/c", str(bat_path), "/nopause"],
+            capture_output=True,
+            creationflags=CREATE_NO_WINDOW,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            return False, f"Código de salida: {result.returncode}"
+        return True, ""
+    except subprocess.TimeoutExpired:
+        return False, "Timeout superado (>2 min)"
+    except Exception as e:
+        return False, str(e)
 
 
-# ── Funciones públicas ────────────────────────────────────────────────────────
-
-def delete_folder_contents(path: str) -> tuple[int, int, int]:
+def run_bat_measured(bat_name: str, paths: list[str]) -> tuple[bool, int, str]:
     """
-    Borra el contenido de una carpeta (no la carpeta en sí).
-    Retorna: (eliminados, bloqueados, bytes_liberados)
-    eliminados == -1 → la ruta no existe.
+    Mide el tamaño de `paths` antes y después de ejecutar el bat.
+    Devuelve (éxito, bytes_liberados, mensaje_error).
     """
-    p = Path(path)
-    if not p.exists():
-        return -1, 0, 0
-
-    deleted = locked = freed = 0
-    for item in list(p.iterdir()):
-        size = _get_size(item)
-        if _remove_item(item):
-            deleted += 1
-            freed += size
-        else:
-            locked += 1
-    return deleted, locked, freed
+    before       = measure_paths(paths)
+    ok, err      = run_bat(bat_name)
+    after        = measure_paths(paths)
+    freed        = max(before - after, 0)
+    return ok, freed, err
 
 
-def delete_thumbcache(path: str) -> tuple[int, int, int]:
-    """
-    Borra thumbcache_*.db e iconcache_*.db.
-    Retorna: (eliminados, bloqueados, bytes_liberados)
-    """
-    p = Path(path)
-    if not p.exists():
-        return -1, 0, 0
-
-    deleted = locked = freed = 0
-    for pattern in ("thumbcache_*.db", "iconcache_*.db"):
-        for f in p.glob(pattern):
-            size = _get_size(f)
-            if _remove_item(f):
-                deleted += 1
-                freed += size
-            else:
-                locked += 1
-    return deleted, locked, freed
-
-
+# ── Papelera de Reciclaje ─────────────────────────────────────────────────────
 def get_recycle_bin_size() -> int:
-    """
-    Consulta el tamaño total de la Papelera de Reciclaje
-    usando la API nativa de Windows (SHQueryRecycleBinW).
-    """
+    """Tamaño total de la Papelera de Reciclaje via API nativa de Windows."""
     class SHQUERYRBINFO(ctypes.Structure):
         _fields_ = [
             ("cbSize",      ctypes.c_ulong),
             ("i64Size",     ctypes.c_longlong),
             ("i64NumItems", ctypes.c_longlong),
         ]
-
     info = SHQUERYRBINFO()
     info.cbSize = ctypes.sizeof(SHQUERYRBINFO)
     ret = ctypes.windll.shell32.SHQueryRecycleBinW(None, ctypes.byref(info))
@@ -129,8 +116,7 @@ def get_recycle_bin_size() -> int:
 def empty_recycle_bin() -> tuple[bool, int]:
     """
     Vacía la Papelera de Reciclaje.
-    Retorna: (éxito, bytes_liberados)
-    Mide el tamaño ANTES de vaciar para informar el espacio recuperado.
+    Devuelve (éxito, bytes_liberados).
     """
     freed = get_recycle_bin_size()
     SHERB_NO_CONFIRM    = 0x00000001
@@ -141,13 +127,14 @@ def empty_recycle_bin() -> tuple[bool, int]:
     return ok, (freed if ok else 0)
 
 
+# ── Visor de Eventos ──────────────────────────────────────────────────────────
 def clear_event_logs() -> tuple[int, int, int]:
     """
-    Borra todos los registros del Visor de Eventos con wevtutil.
-    Retorna: (limpiados, protegidos, bytes_liberados)
-    Mide el tamaño del directorio de logs antes y después.
+    Limpia todos los registros del Visor de Eventos con wevtutil.
+    Devuelve (limpiados, protegidos, bytes_liberados).
+    Mide el directorio winevt/Logs antes y después para calcular el espacio.
     """
-    log_dir = Path(r"C:\Windows\System32\winevt\Logs")
+    log_dir     = Path(r"C:\Windows\System32\winevt\Logs")
     size_before = _get_size(log_dir) if log_dir.exists() else 0
 
     res = subprocess.run(["wevtutil", "el"], capture_output=True, text=True)
@@ -163,14 +150,5 @@ def clear_event_logs() -> tuple[int, int, int]:
             failed += 1
 
     size_after = _get_size(log_dir) if log_dir.exists() else 0
-    freed = max(size_before - size_after, 0)
+    freed      = max(size_before - size_after, 0)
     return cleared, failed, freed
-
-
-def run_command(cmd: list[str]) -> bool:
-    """Ejecuta un comando externo. Retorna True si tuvo éxito."""
-    try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
-        return r.returncode == 0
-    except Exception:
-        return False
