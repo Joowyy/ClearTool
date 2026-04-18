@@ -7,12 +7,12 @@ from tkinter import font as tkfont
 
 from categories import build_categories
 from cleaner import (
+    SCRIPTS_DIR,
     clear_event_logs,
-    delete_folder_contents,
-    delete_thumbcache,
     empty_recycle_bin,
     format_size,
-    run_command,
+    run_bat,
+    run_bat_measured,
 )
 from dialogs import RecycleBinDialog
 from theme import (
@@ -36,6 +36,16 @@ class App(tk.Tk):
         self._center()
         self._log("ClearTool PC listo.", C_INFO)
         self._log("Selecciona los elementos y pulsa  Iniciar limpieza.", MUTED)
+
+        # Diagnóstico de ruta de scripts al arranque
+        scripts_ok = SCRIPTS_DIR.exists()
+        self._log(f"Scripts dir: {SCRIPTS_DIR}", MUTED)
+        if not scripts_ok:
+            self._log(
+                "⚠ Directorio de scripts NO encontrado. "
+                "Verifica que src/scripts/ existe junto al exe.",
+                C_WARN,
+            )
 
     # ── Centrado ──────────────────────────────────────────────────────
     def _center(self):
@@ -328,42 +338,35 @@ class App(tk.Tk):
 
     # ── Procesado por tipo ────────────────────────────────────────────
     def _process(self, cat: dict) -> tuple[int, int, int]:
-        """Retorna (eliminados, bloqueados, bytes_liberados)."""
-        t = cat["type"]
+        """
+        Ejecuta el bat correspondiente a la categoría y devuelve
+        (eliminados, bloqueados, bytes_liberados).
+        """
+        t    = cat["type"]
+        bat  = cat.get("bat", "")
+        paths = cat.get("paths", [])
 
-        if t == "folder":
-            total_d = total_l = total_freed = 0
-            for path in cat["paths"]:
-                self._log(f"    → {path}", MUTED)
-                d, l, freed = delete_folder_contents(path)
-                if d == -1:
-                    self._log("      Ruta no encontrada, omitida.", MUTED)
-                else:
-                    self._log(
-                        f"      ✓ {d} eliminados · {l} bloqueados · {format_size(freed)}",
-                        C_OK if l == 0 else C_WARN,
-                    )
-                    total_d    += d
-                    total_l    += l
-                    total_freed += freed
-            return total_d, total_l, total_freed
+        # ── bat_folder: mide antes, ejecuta bat, mide después ─────────
+        if t == "bat_folder":
+            self._log(f"    → {bat}", MUTED)
+            ok, freed, err = run_bat_measured(bat, paths)
+            if not ok:
+                self._log(f"      ! {err}", C_WARN)
+                return 0, 0, freed
+            self._log(f"      ✓ {format_size(freed)} liberados", C_OK)
+            return 1, 0, freed
 
-        elif t == "thumbcache":
-            total_d = total_l = total_freed = 0
-            for path in cat["paths"]:
-                self._log(f"    → {path}", MUTED)
-                d, l, freed = delete_thumbcache(path)
-                if d == -1:
-                    self._log("      Ruta no encontrada, omitida.", MUTED)
-                else:
-                    self._log(
-                        f"      ✓ {d} archivos · {format_size(freed)}", C_OK
-                    )
-                    total_d    += d
-                    total_l    += l
-                    total_freed += freed
-            return total_d, total_l, total_freed
+        # ── bat_command: ejecuta bat, sin medición de disco ───────────
+        elif t == "bat_command":
+            self._log(f"    → {bat}", MUTED)
+            ok, err = run_bat(bat)
+            if ok:
+                self._log("      ✓ Completado", C_OK)
+            else:
+                self._log(f"      ! {err}", C_WARN)
+            return (1, 0, 0) if ok else (0, 0, 0)
 
+        # ── recycle_bin: diálogo → WinAPI ─────────────────────────────
         elif t == "recycle_bin":
             self._log("    → Esperando respuesta del usuario...", MUTED)
             action = self._ask_recycle_bin()
@@ -379,8 +382,9 @@ class App(tk.Tk):
                 self._log("      — Omitido por el usuario.", MUTED)
                 return 0, 0, 0
 
+        # ── event_logs: wevtutil + medición winevt/Logs ───────────────
         elif t == "event_logs":
-            self._log("    → Limpiando registros de eventos...", MUTED)
+            self._log(f"    → {bat or 'wevtutil'}", MUTED)
             cleared, failed, freed = clear_event_logs()
             self._log(
                 f"      ✓ {cleared} registros limpiados · {failed} protegidos "
@@ -388,15 +392,5 @@ class App(tk.Tk):
                 C_OK,
             )
             return cleared, failed, freed
-
-        elif t == "command":
-            self._log(f"    → {' '.join(cat['cmd'][:2])} ...", MUTED)
-            ok = run_command(cat["cmd"])
-            self._log(
-                "      ✓ Completado" if ok
-                else "      ! No disponible en este sistema",
-                C_OK if ok else C_WARN,
-            )
-            return (1, 0, 0) if ok else (0, 0, 0)
 
         return 0, 0, 0
