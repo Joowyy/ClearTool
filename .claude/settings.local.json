@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"C:\\\\Users\\\\joels_dzyf1nt\\\\OneDrive\\\\Documentos\\\\ScriptLimpiezaPC\\\\src\\\\scripts\" /b)"
+    ]
+  }
+}
