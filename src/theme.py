@@ -1,20 +1,24 @@
-"""Paleta de colores y fuentes de ClearTool PC."""
+"""Tema visual — Midnight Dashboard."""
 
 from tkinter import font as tkfont
 
-BG       = "#0d0d0d"
-SURFACE  = "#141414"
-SURFACE2 = "#1e1e1e"
-BORDER   = "#252525"
-ACCENT   = "#4ade80"
-ACCENT_D = "#16a34a"
-TEXT     = "#f4f4f5"
-MUTED    = "#52525b"
-LOG_BG   = "#0a0a0a"
-C_OK     = "#4ade80"
-C_WARN   = "#fbbf24"
-C_ERR    = "#f87171"
-C_INFO   = "#60a5fa"
+# ── Paleta ────────────────────────────────────────────────────────────────────
+BG       = "#060912"   # fondo principal — casi negro azulado
+SURFACE  = "#0c1220"   # superficies secundarias
+SURFACE2 = "#111b2e"   # fondo de tarjetas
+SURFACE3 = "#192640"   # tarjeta en hover
+BORDER   = "#1e2d47"   # bordes sutiles
+ACCENT   = "#7c3aed"   # violeta principal
+ACCENT_L = "#a78bfa"   # violeta claro (hover, resaltes)
+ACCENT_D = "#5b21b6"   # violeta oscuro (pressed)
+TEXT     = "#e2e8f0"   # texto principal
+MUTED    = "#3d4f68"   # texto apagado oscuro
+MUTED2   = "#64748b"   # texto apagado claro
+LOG_BG   = "#030710"   # fondo del terminal
+C_OK     = "#10b981"   # esmeralda — éxito
+C_WARN   = "#f59e0b"   # ámbar — advertencia
+C_ERR    = "#ef4444"   # rojo — error
+C_INFO   = "#60a5fa"   # azul — información
 
 
 def mono_font() -> str:
