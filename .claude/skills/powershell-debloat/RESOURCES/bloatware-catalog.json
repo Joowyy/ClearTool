@@ -1,0 +1,197 @@
+{
+  "$schema": "./bloatware-catalog.schema.json",
+  "version": "0.1.0",
+  "updatedAt": "2026-05-09",
+  "entries": [
+    {
+      "id": "microsoft.bingnews",
+      "displayName": "Microsoft News",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "packageNames": ["Microsoft.BingNews"],
+      "risk": "low",
+      "consequences": ["Se elimina el widget de noticias en barra de tareas si está activo."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Microsoft News'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.bingweather",
+      "displayName": "MSN Weather",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "packageNames": ["Microsoft.BingWeather"],
+      "risk": "low",
+      "consequences": [],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'MSN Weather'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.copilot",
+      "displayName": "Microsoft Copilot",
+      "category": "ai",
+      "removalStrategy": "appx-allusers",
+      "packageNames": ["Microsoft.Copilot", "Microsoft.Windows.Copilot"],
+      "registryKeys": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Policies\\Microsoft\\Windows\\WindowsCopilot",
+          "name": "TurnOffWindowsCopilot",
+          "type": "DWORD",
+          "value": 1
+        }
+      ],
+      "risk": "medium",
+      "consequences": ["Se elimina el icono Copilot de la barra de tareas.", "El atajo Win+C deja de funcionar."],
+      "reversal": {"method": "store-reinstall", "details": "Reinstalable desde Microsoft Store si la política no está aplicada."},
+      "windowsBuilds": [">=22621"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.widgets",
+      "displayName": "Widgets (Windows Web Experience)",
+      "category": "ms-core",
+      "removalStrategy": "appx-allusers",
+      "packageNames": ["MicrosoftWindows.Client.WebExperience"],
+      "registryKeys": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Dsh",
+          "name": "AllowNewsAndInterests",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "medium",
+      "consequences": ["Desaparece el botón de Widgets en la barra de tareas."],
+      "reversal": {"method": "store-reinstall", "details": "Reinstalable como 'Windows Web Experience Pack'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.teams.consumer",
+      "displayName": "Microsoft Teams (consumer)",
+      "category": "ms-core",
+      "removalStrategy": "appx-allusers",
+      "packageNames": ["MicrosoftTeams"],
+      "registryKeys": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarMn",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "medium",
+      "consequences": ["Desaparece el icono Chat de la barra de tareas."],
+      "reversal": {"method": "store-reinstall", "details": "Reinstalable desde Microsoft Store."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.onedrive",
+      "displayName": "OneDrive",
+      "category": "ms-core",
+      "removalStrategy": "custom",
+      "customScript": "uninstall-onedrive.ps1",
+      "risk": "high",
+      "consequences": [
+        "Se detiene la sincronización local; archivos ya descargados quedan en %USERPROFILE%\\OneDrive.",
+        "Se eliminan accesos directos en Explorador de archivos.",
+        "Apps que dependen de OneDrive (Office por defecto) pueden pedir reconfiguración."
+      ],
+      "reversal": {"method": "manual-installer", "details": "Descargar OneDriveSetup.exe desde onedrive.live.com."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.edge",
+      "displayName": "Microsoft Edge",
+      "category": "ms-core",
+      "removalStrategy": "edge-installer",
+      "risk": "destructive",
+      "consequences": [
+        "Apps que usan WebView2 pueden romperse si no hay otro Edge runtime presente.",
+        "Algunas features de Windows (búsqueda, ayuda) abren Edge por defecto.",
+        "Las actualizaciones de Edge pueden reinstalar la app si no se aplica la policy de bloqueo."
+      ],
+      "registryKeys": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Microsoft\\EdgeUpdate",
+          "name": "DoNotUpdateToEdgeWithChromium",
+          "type": "DWORD",
+          "value": 1
+        }
+      ],
+      "reversal": {"method": "manual-installer", "details": "Descargar instalador desde microsoft.com/edge."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.windowsstore",
+      "displayName": "Microsoft Store",
+      "category": "ms-core",
+      "removalStrategy": "appx-allusers",
+      "packageNames": ["Microsoft.WindowsStore"],
+      "risk": "destructive",
+      "consequences": [
+        "Sin Store no podrás reinstalar fácilmente apps Appx.",
+        "Apps dependientes del Store quedarán sin update path."
+      ],
+      "reversal": {"method": "manual-script", "details": "Reinstalación con 'Add-AppxPackage -Register' apuntando al manifest del paquete; complejo, requerir wsreset."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "telemetry.diagtrack",
+      "displayName": "Connected User Experiences and Telemetry",
+      "category": "telemetry",
+      "removalStrategy": "service-disable",
+      "service": {"name": "DiagTrack", "displayName": "Connected User Experiences and Telemetry"},
+      "risk": "low",
+      "consequences": ["Microsoft deja de recibir telemetría diagnóstica.", "Posible impacto menor en informes de errores agregados."],
+      "reversal": {"method": "service-restart", "details": "sc config DiagTrack start= auto && sc start DiagTrack"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "telemetry.dmwappush",
+      "displayName": "Device Management WAP Push",
+      "category": "telemetry",
+      "removalStrategy": "service-disable",
+      "service": {"name": "dmwappushservice", "displayName": "Device Management Wireless Application Protocol (WAP) Push message Routing Service"},
+      "risk": "low",
+      "consequences": [],
+      "reversal": {"method": "service-restart", "details": "sc config dmwappushservice start= manual"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "tweak.taskbar.widgets-button",
+      "displayName": "Botón Widgets en barra de tareas",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "registryKeys": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarDa",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Se oculta el botón sin desinstalar el paquete."],
+      "reversal": {"method": "registry", "details": "TaskbarDa=1"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": false
+    }
+  ],
+  "_notes": [
+    "Esta lista es un punto de partida. El usuario tiene un proyecto previo del cual se incorporarán entradas.",
+    "Cada entrada nueva debe pasar revisión de security-auditor antes de marcarse 'stable'."
+  ]
+}
