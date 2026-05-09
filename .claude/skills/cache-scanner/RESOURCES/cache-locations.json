@@ -1,0 +1,139 @@
+{
+  "$schema": "./cache-locations.schema.json",
+  "version": "0.1.0",
+  "updatedAt": "2026-05-09",
+  "entries": [
+    {
+      "id": "user.temp",
+      "displayName": "Carpeta TEMP del usuario",
+      "path": "%TEMP%",
+      "category": "user-temp",
+      "requiresAdmin": false,
+      "risk": "low",
+      "preconditions": [],
+      "filters": {"olderThanDays": 1, "exclude": ["*.lock"]},
+      "consequences": ["Apps en ejecución pueden re-crear sus temporales."],
+      "averageSize": "50MB-2GB"
+    },
+    {
+      "id": "user.localappdata.temp",
+      "displayName": "%LOCALAPPDATA%\\Temp",
+      "path": "%LOCALAPPDATA%\\Temp",
+      "category": "user-temp",
+      "requiresAdmin": false,
+      "risk": "low",
+      "preconditions": [],
+      "filters": {"olderThanDays": 1},
+      "consequences": [],
+      "averageSize": "50MB-2GB"
+    },
+    {
+      "id": "system.temp",
+      "displayName": "C:\\Windows\\Temp",
+      "path": "%SYSTEMROOT%\\Temp",
+      "category": "system-temp",
+      "requiresAdmin": true,
+      "risk": "low",
+      "preconditions": [],
+      "filters": {},
+      "consequences": [],
+      "averageSize": "100MB-5GB"
+    },
+    {
+      "id": "windows-update.softwaredistribution",
+      "displayName": "Windows Update — caché de descargas",
+      "path": "%SYSTEMROOT%\\SoftwareDistribution\\Download",
+      "category": "windows-update",
+      "requiresAdmin": true,
+      "risk": "low",
+      "preconditions": ["service:wuauserv:stop", "service:bits:stop"],
+      "filters": {},
+      "consequences": ["La próxima sesión de Windows Update re-descargará paquetes pendientes."],
+      "averageSize": "200MB-10GB"
+    },
+    {
+      "id": "cbs-dism.logs",
+      "displayName": "Logs CBS y DISM",
+      "path": "%SYSTEMROOT%\\Logs\\CBS",
+      "category": "logs",
+      "requiresAdmin": true,
+      "risk": "low",
+      "preconditions": [],
+      "filters": {"olderThanDays": 14},
+      "consequences": ["Pierdes logs históricos de servicing; los nuevos se generan al uso."],
+      "averageSize": "50MB-1GB"
+    },
+    {
+      "id": "prefetch",
+      "displayName": "Prefetch",
+      "path": "%SYSTEMROOT%\\Prefetch",
+      "category": "logs",
+      "requiresAdmin": true,
+      "risk": "medium",
+      "preconditions": [],
+      "filters": {},
+      "consequences": ["Apps frecuentes tardarán algo más en arrancar la primera vez post-limpieza."],
+      "averageSize": "50MB-500MB"
+    },
+    {
+      "id": "thumbnail.cache",
+      "displayName": "Caché de miniaturas (Explorer)",
+      "path": "%LOCALAPPDATA%\\Microsoft\\Windows\\Explorer",
+      "category": "thumbnail",
+      "requiresAdmin": false,
+      "risk": "low",
+      "preconditions": [],
+      "filters": {"include": ["thumbcache_*.db", "iconcache_*.db"]},
+      "consequences": ["Las miniaturas se regeneran al abrir carpetas."],
+      "averageSize": "100MB-2GB"
+    },
+    {
+      "id": "wer.reportarchive",
+      "displayName": "Windows Error Reporting — reportes archivados",
+      "path": "%LOCALAPPDATA%\\Microsoft\\Windows\\WER\\ReportArchive",
+      "category": "wer",
+      "requiresAdmin": false,
+      "risk": "low",
+      "preconditions": [],
+      "filters": {},
+      "consequences": [],
+      "averageSize": "10MB-500MB"
+    },
+    {
+      "id": "inetcache",
+      "displayName": "INetCache (IE/Edge legacy)",
+      "path": "%LOCALAPPDATA%\\Microsoft\\Windows\\INetCache",
+      "category": "browser-cache",
+      "requiresAdmin": false,
+      "risk": "low",
+      "preconditions": [],
+      "filters": {},
+      "consequences": [],
+      "averageSize": "50MB-1GB"
+    },
+    {
+      "id": "edge.cache",
+      "displayName": "Microsoft Edge — Cache",
+      "path": "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\Default\\Cache",
+      "category": "browser-cache",
+      "requiresAdmin": false,
+      "risk": "low",
+      "preconditions": ["process:msedge.exe:not-running"],
+      "filters": {},
+      "consequences": ["Edge re-descargará recursos al navegar."],
+      "averageSize": "100MB-2GB"
+    },
+    {
+      "id": "fontcache",
+      "displayName": "Caché de fuentes",
+      "path": "%SYSTEMROOT%\\ServiceProfiles\\LocalService\\AppData\\Local\\FontCache",
+      "category": "font",
+      "requiresAdmin": true,
+      "risk": "medium",
+      "preconditions": ["service:FontCache:stop"],
+      "filters": {},
+      "consequences": ["El servicio se relanza y reconstruye la caché en segundo plano."],
+      "averageSize": "10MB-200MB"
+    }
+  ]
+}
