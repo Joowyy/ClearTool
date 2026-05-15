@@ -6,42 +6,54 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct CacheLocation {
     pub id: String,
-    pub label: String,
+    pub display_name: String,
     pub category: String,
-    pub path: String,
+    pub path_template: String,
     pub requires_admin: bool,
-    pub estimated_safe: bool,
+    pub risk: String,
+    pub consequences: Vec<String>,
+    pub average_size: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CacheScanResult {
-    pub items: Vec<CacheScanItem>,
-    pub total_bytes: u64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CacheScanItem {
+pub struct CacheScanReport {
     pub id: String,
-    pub size_bytes: u64,
+    pub resolved_path: String,
+    pub exists: bool,
+    pub bytes: u64,
     pub file_count: u64,
-    pub error: Option<String>,
+    pub matched_after_filters: u64,
+    pub bytes_after_filters: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanCacheInput {
+    pub ids: Vec<String>,
+    pub dry_run: bool,
+    pub create_restore_point: bool,
+    pub force_close_processes: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PerLocationResult {
+    pub id: String,
+    pub status: String,
+    pub bytes_freed: u64,
+    pub files_deleted: u64,
+    pub errors: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CleanReport {
-    pub items: Vec<CleanReportItem>,
-    pub freed_bytes: u64,
-    pub dry_run: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CleanReportItem {
-    pub id: String,
-    pub freed_bytes: u64,
-    pub deleted_files: u64,
-    pub error: Option<String>,
+    pub run_id: String,
+    pub started_at: String,
+    pub finished_at: String,
+    pub restore_point_id: Option<u32>,
+    pub per_location: Vec<PerLocationResult>,
+    pub total_bytes_freed: u64,
+    pub total_files_deleted: u64,
 }

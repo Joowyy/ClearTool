@@ -6,53 +6,31 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct RegistryTweak {
     pub id: String,
-    pub label: String,
+    pub display_name: String,
     pub description: String,
     pub category: String,
-    pub hive: RegistryHive,
+    pub hive: String,
     pub path: String,
     pub value_name: String,
-    pub value_kind: RegistryValueKind,
-    pub on_value: serde_json::Value,
-    pub off_value: serde_json::Value,
-    pub requires_admin: bool,
-    pub disclaimer: Option<String>,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum RegistryHive {
-    Hkcu,
-    Hklm,
-    Hku,
-    Hkcr,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum RegistryValueKind {
-    String,
-    ExpandString,
-    Dword,
-    Qword,
-    Binary,
-    MultiString,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum RegistryTweakState {
-    On,
-    Off,
-    Unknown,
+    pub enabled_value: serde_json::Value,
+    pub disabled_value: serde_json::Value,
+    pub requires_reboot: bool,
+    pub risk: String,
+    pub consequences: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TweakResult {
+pub struct TweakState {
     pub id: String,
-    pub success: bool,
-    pub previous_state: RegistryTweakState,
-    pub new_state: RegistryTweakState,
-    pub message: String,
+    pub is_enabled: Option<bool>,
+    pub current_raw: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApplyTweakInput {
+    pub id: String,
+    pub enable: bool,
+    pub dry_run: bool,
 }

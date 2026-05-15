@@ -1,49 +1,30 @@
-// AppError — tipo de error unificado para todo el backend.
-//
-// Stub provisional: la implementación final usa `thiserror` (ver
-// .claude/specs/02-backend-rust.md) pero para no añadir la dependencia hasta
-// que la necesite algún módulo, mantengo un enum manual con `Display` y
-// `Serialize` artesanales. Cuando metamos thiserror, se reescribe en una
-// pasada — la API pública (variantes y `kind`) ya queda fijada aquí.
+use serde::{ser::SerializeMap, Serialize, Serializer};
+use thiserror::Error;
 
-use serde::{Serialize, Serializer};
-use std::fmt;
-
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum AppError {
-    Io(std::io::Error),
+    #[error("io: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("registry: {0}")]
     Registry(String),
+    #[error("powershell: {0}")]
     Powershell(String),
+    #[error("permission: {0}")]
     Permission(String),
+    #[error("not elevated")]
     NotElevated,
+    #[error("cancelled")]
     Cancelled,
+    #[error("restore unavailable: {0}")]
     RestoreUnavailable(String),
+    #[error("external: {0}")]
     External(String),
+    #[error("not implemented")]
     NotImplemented,
-}
-
-impl fmt::Display for AppError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AppError::Io(e) => write!(f, "io: {}", e),
-            AppError::Registry(m) => write!(f, "registry: {}", m),
-            AppError::Powershell(m) => write!(f, "powershell: {}", m),
-            AppError::Permission(m) => write!(f, "permission: {}", m),
-            AppError::NotElevated => write!(f, "not elevated"),
-            AppError::Cancelled => write!(f, "cancelled"),
-            AppError::RestoreUnavailable(m) => write!(f, "restore unavailable: {}", m),
-            AppError::External(m) => write!(f, "external: {}", m),
-            AppError::NotImplemented => write!(f, "not implemented"),
-        }
-    }
-}
-
-impl std::error::Error for AppError {}
-
-impl From<std::io::Error> for AppError {
-    fn from(e: std::io::Error) -> Self {
-        AppError::Io(e)
-    }
+    #[error("catalog: {0}")]
+    Catalog(String),
+    #[error("json: {0}")]
+    Json(#[from] serde_json::Error),
 }
 
 impl Serialize for AppError {
@@ -58,11 +39,13 @@ impl Serialize for AppError {
             AppError::RestoreUnavailable(_) => "restore-unavailable",
             AppError::External(_) => "external",
             AppError::NotImplemented => "not-implemented",
+            AppError::Catalog(_) => "catalog",
+            AppError::Json(_) => "json",
         };
-        let mut map = serde_json::Map::new();
-        map.insert("kind".into(), kind.into());
-        map.insert("message".into(), self.to_string().into());
-        serde_json::Value::Object(map).serialize(s)
+        let mut map = s.serialize_map(Some(2))?;
+        map.serialize_entry("kind", kind)?;
+        map.serialize_entry("message", &self.to_string())?;
+        map.end()
     }
 }
 

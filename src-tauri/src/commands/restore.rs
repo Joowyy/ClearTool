@@ -1,7 +1,7 @@
 // commands/restore.rs — System Restore Points (vía SRSetRestorePointW).
 
 use crate::error::{AppError, AppResult};
-use crate::models::restore::{RestorePoint, RestoreResult};
+use crate::models::restore::{CreateRestorePointInput, RestorePoint, RestoreReport};
 
 #[tauri::command]
 pub async fn ensure_restore_enabled() -> AppResult<bool> {
@@ -9,7 +9,7 @@ pub async fn ensure_restore_enabled() -> AppResult<bool> {
 }
 
 #[tauri::command]
-pub async fn create_restore_point(_description: String) -> AppResult<RestorePoint> {
+pub async fn create_restore_point(_input: CreateRestorePointInput) -> AppResult<RestoreReport> {
     Err(AppError::NotImplemented)
 }
 
@@ -19,6 +19,6 @@ pub async fn list_restore_points() -> AppResult<Vec<RestorePoint>> {
 }
 
 #[tauri::command]
-pub async fn restore_to_point(_sequence_number: u32) -> AppResult<RestoreResult> {
+pub async fn restore_to_point(_sequence_number: u32) -> AppResult<()> {
     Err(AppError::NotImplemented)
 }

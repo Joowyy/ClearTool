@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Registry Tweaks",
+  "description": "Catálogo de tweaks del registro Windows",
+  "type": "object",
+  "required": ["version", "updatedAt", "tweaks"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date"
+    },
+    "tweaks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "displayName",
+          "description",
+          "category",
+          "risk",
+          "requiresAdmin",
+          "requiresReboot",
+          "consequences",
+          "operations",
+          "reverseOperations"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "ui",
+              "search",
+              "privacy",
+              "performance",
+              "telemetry"
+            ]
+          },
+          "risk": {
+            "type": "string",
+            "enum": ["low", "medium", "high"]
+          },
+          "requiresAdmin": {
+            "type": "boolean"
+          },
+          "requiresReboot": {
+            "type": "boolean"
+          },
+          "minBuild": {
+            "type": "integer"
+          },
+          "maxBuild": {
+            "type": "integer"
+          },
+          "consequences": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "reverseOperations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}

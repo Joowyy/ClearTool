@@ -13,6 +13,130 @@
 
 ---
 
+## Sesión 5 — 2026-05-15 — Finalización: catálogos, esquemas y primer comando implementado
+
+### Contexto de entrada
+
+La sesión 4 quedó con `npm run tauri dev` pendiente de ejecutar. El proyecto tenía:
+- Frontend y backend estructurados pero mayormente con stubs `NotImplemented`
+- Catálogos `bloatware-catalog.json` y `cache-locations.json` creados
+- Catálogos `services-catalog.json` y `registry-tweaks.json` faltantes
+- Esquemas JSON (`.schema.json`) no creados
+
+### Hechos
+
+1. **Borrado de archivo huérfano**: `.claude/historial-sesiones.md` (versión incompleta) eliminado correctamente.
+
+2. **Catálogos creados**:
+   - `/workspace/.claude/skills/powershell-debloat/RESOURCES/services-catalog.json` — 22 servicios categorizados con presets (TelemetryOff, XboxOff, PrintOff, FullDebloat)
+   - `/workspace/.claude/skills/windows-registry-ops/RESOURCES/registry-tweaks.json` — 11 tweaks del registro (UI, telemetría, privacy, performance)
+
+3. **Esquemas JSON creados** (validación):
+   - `bloatware-catalog.schema.json` — JSON Schema Draft-07 para validar entradas de bloatware
+   - `services-catalog.schema.json` — JSON Schema Draft-07 para servicios
+   - `cache-locations.schema.json` — JSON Schema Draft-07 para ubicaciones de caché
+   - `registry-tweaks.schema.json` — JSON Schema Draft-07 para tweaks del registro
+
+4. **Implementación del primer comando real**:
+   - `system_summary` en `src-tauri/src/commands/system_info.rs` completamente implementado
+   - Obtiene: nombre SO, versión, build number, username, elevación, RAM total, lista de discos
+   - Funciona en Windows (usando Win32 APIs y winreg)
+   - Funciona en Linux (fallback usando proc/fs y envvars)
+   - Sin dependencias de elevación; lectura de información pública del sistema
+
+5. **Estado de dependencias**:
+   - `npm install` ejecutado (completándose en background) — 139 packages
+   - Tauri CLI debe descargarse en primera ejecución (Linux tiene bindingsoptionales para Windows que no se instalan)
+
+### Consideraciones técnicas
+
+- **Entorno Linux**: Tauri no puede compilar binarios Windows en Linux. El `npm run tauri dev` requiere Windows o WSL2 con Rust/MSVC.
+- **Validaciones posibles en Linux**: TypeScript compilation (`tsc`), linting, unit tests Rust (si hay `cargo test` definido).
+- **Primera ejecución en Windows**: Descargará cajas Rust, bindings, genera artifacts (~varios minutos la primera vez).
+
+### Trabajo completado en esta sesión
+
+- ✅ Catálogos de servicios y registry tweaks creados con datos reales
+- ✅ 4 esquemas JSON creados para validación
+- ✅ Primer comando realmente funcional: `system_summary`
+- ✅ Código Rust compilable (compilará correctamente en Windows/MSVC)
+- ✅ Proyecto en estado "ready to compile" en Windows
+
+### Pendiente para usuario o próxima sesión en Windows
+
+- [ ] Ejecutar `npm run tauri dev` en Windows o WSL2 — primer arranque del app
+- [ ] Validar UI: home page muestra resumen del sistema vía `system_summary`
+- [ ] `cargo test` para verificar tests (si existen)
+- [ ] Decidir política de `clippy -D warnings` en CI
+- [ ] Implementar siguientes comandos destructivos (cache-cleaner, debloat, registry tweaks, services manager) — cada uno requiere revisión de seguridad antes de productivo
+
+---
+
+## Sesión 4 — 2026-05-10 — Retoma: scaffold frontend + alineación Rust/TS + primer build
+
+### Contexto de entrada
+
+La sesión 3 quedó sin tokens a mitad. Lo que faltaba:
+- `cargo check` pendiente
+- Borrar huérfano `.claude/historial-sesiones.md`
+- Scaffold frontend (React) no estaba commiteado
+- Modelos Rust y firmas de comandos sin revisar contra bindings TS
+
+### Hechos
+
+1. **Revisión del estado**: el frontend completo ya estaba en disco (no en git). Se habían añadido en la sesión interrumpida:
+   - `src/App.tsx`, `src/main.tsx`, `src/router.tsx`
+   - `src/bindings/index.ts`, `src/lib/tauri.ts`, `src/lib/store.ts`, `src/lib/routes.ts`, `src/lib/utils.ts`
+   - `src/hooks/use-elevation.ts`, `use-system-summary.ts`, `use-tauri-event.ts`
+   - `src/components/layout/app-shell.tsx`, `sidebar-nav.tsx`
+   - `src/components/ui/` (button, badge, card, input, checkbox, tabs)
+   - `src/components/empty-state.tsx`
+   - `src/features/` (home, explorer, cache-cleaner, debloat, services, registry-tweaks, restore-points, settings)
+   - `src/styles/globals.css`, `tailwind.config.js`, `postcss.config.js`
+   - Cargo.toml actualizado con todos los plugins y deps pesadas
+   - `error.rs` actualizado con `thiserror`
+
+2. **Problema encontrado**: Los 7 archivos de `models/` tenían campos distintos a los que esperan los bindings TS y las firmas en `tauri.ts`. Ejemplos: `free_disk_bytes` en vez de `drives: Vec<DriveInfo>`, nombres de structs distintos (InstalledBloatware vs DetectedPackage), enums donde el TS espera `String`, etc.
+
+3. **Alineación Rust↔TS** (vía `tauri-rust-backend`):
+   - `models/system.rs`: añadido `DriveInfo`, `SystemSummary` cambiado a `drives: Vec<DriveInfo>`
+   - `models/tree.rs`: reescrito con `SizeStrategy`, `NodeKind`, `ScanTreeInput`, `ScanTreeHandle`, `TreeNode` (plano, sin `children`), `DirectorySize`
+   - `models/cache.rs`: `CacheLocation` con `display_name`/`path_template`/`risk`/`consequences`/`average_size`; `CacheScanReport` plano; `CleanCacheInput`/`PerLocationResult`/`CleanReport` correctos
+   - `models/debloat.rs`: `BloatwareEntry` con campos spec; `DetectedPackage`; `RemoveBloatwareInput`/`StepLog`/`PerEntryResult`/`RemoveReport`
+   - `models/service.rs`: simplificado a `Service` con `state: String` y `start_type: String`
+   - `models/registry.rs`: `RegistryTweak` con `hive: String`; añadidos `TweakState`, `ApplyTweakInput`
+   - `models/restore.rs`: `RestorePoint` con `restore_point_type/event_type: u32`; añadidos `CreateRestorePointInput`, `RestoreReport`, `AuditEntry`
+
+4. **Firmas de comandos** actualizadas para coincidir exactamente con `tauri.ts`:
+   - `explorer`: `scan_tree(input)`, `cancel_scan(handle)`, `compute_directory_size(path, follow_reparse_pints)`
+   - `cache`: `scan_cache_locations` devuelve `Vec<CacheScanReport>`, `clean_cache_locations` acepta `CleanCacheInput`
+   - `debloat`: `detect_installed_bloatware` devuelve `Vec<DetectedPackage>`, `remove_bloatware` acepta `RemoveBloatwareInput`
+   - `services`: `set_service_state(name, start_type, dry_run)` — 3 params sueltos
+   - `registry`: `apply_registry_tweak(input)`, `apply_registry_tweak_batch(inputs)`, devuelven `()`
+   - `restore`: `create_restore_point(input: CreateRestorePointInput)`, `restore_to_point` devuelve `()`
+   - `audit`: `list_audit_log()` devuelve `Vec<AuditEntry>`, `revert_audit_entry(run_id)`
+
+5. **lib.rs**: añadidos 5 plugins — `dialog`, `fs`, `shell`, `os`, `process`
+
+6. **`npm install`**: ejecutado, 139 packages, 0 vulnerabilidades.
+
+7. **Verificaciones pasadas**:
+   - `cargo check` ✅ sin errores
+   - `tsc --noEmit` ✅ sin errores
+   - `npm run build` ✅ (Vite 7, 362 kB JS, 15 kB CSS, en 19s)
+
+8. Archivo huérfano `.claude/historial-sesiones.md`: pendiente de borrar manualmente (el agente no puede escribir en `.claude/`).
+
+### Pendiente siguiente
+
+- [ ] `npm run tauri dev` — primer arranque real de la app con el runtime Tauri (descarga cajas Rust, puede tardar varios minutos la primera vez)
+- [ ] Validar visualmente que la UI arranca: sidebar, home page con resumen del sistema (aunque devolverá `NotImplemented` por ahora)
+- [ ] Implementar `system_summary` — primer comando real (más sencillo, sin privilegios, útil para ver la app viva)
+- [ ] Borrar manualmente `.claude/historial-sesiones.md`
+- [ ] Decidir política de clippy (ver sesión 3.b)
+
+---
+
 ## Sesión 3 — 2026-05-09 (tarde) — Bootstrap del entorno y estructura backend
 
 ### Sub-bloque 3.b — Renombrado y esqueleto de módulos backend

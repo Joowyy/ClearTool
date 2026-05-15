@@ -1,0 +1,406 @@
+{
+  "$schema": "./registry-tweaks.schema.json",
+  "version": "0.1.0",
+  "updatedAt": "2026-05-10",
+  "tweaks": [
+    {
+      "id": "search.disable-bing",
+      "displayName": "Desactivar sugerencias de Bing en búsqueda",
+      "description": "Quita Bing del cuadro de búsqueda de Windows",
+      "category": "search",
+      "risk": "low",
+      "requiresAdmin": true,
+      "requiresReboot": false,
+      "minBuild": 22000,
+      "consequences": [
+        "Las sugerencias de búsqueda no incluirán resultados de Bing"
+      ],
+      "operations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Policies\\Microsoft\\Windows\\Explorer",
+          "name": "DisableSearchBoxSuggestions",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 1
+            }
+          }
+        }
+      ],
+      "reverseOperations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Policies\\Microsoft\\Windows\\Explorer",
+          "name": "DisableSearchBoxSuggestions",
+          "op": "DeleteValue"
+        }
+      ]
+    },
+    {
+      "id": "taskbar.left-align",
+      "displayName": "Alinear menú Inicio a la izquierda",
+      "description": "Restaura el menú Inicio alineado a la izquierda como en Windows 10",
+      "category": "ui",
+      "risk": "low",
+      "requiresAdmin": false,
+      "requiresReboot": true,
+      "minBuild": 22000,
+      "consequences": [
+        "El menú Inicio y la barra de tareas se alinean a la izquierda"
+      ],
+      "operations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarAl",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 0
+            }
+          }
+        }
+      ],
+      "reverseOperations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarAl",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "context-menu.classic",
+      "displayName": "Restaurar menú contextual clásico",
+      "description": "Reactiva el menú contextual clásico de Windows 10",
+      "category": "ui",
+      "risk": "medium",
+      "requiresAdmin": true,
+      "requiresReboot": true,
+      "minBuild": 22000,
+      "consequences": [
+        "El menú contextual (clic derecho) volverá al estilo de Windows 10"
+      ],
+      "operations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32",
+          "name": null,
+          "op": {
+            "SetValue": {
+              "kind": "Sz",
+              "value": ""
+            }
+          }
+        }
+      ],
+      "reverseOperations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32",
+          "name": null,
+          "op": "DeleteKey"
+        }
+      ]
+    },
+    {
+      "id": "widgets.disable",
+      "displayName": "Desactivar widgets en barra de tareas",
+      "description": "Quita el botón de widgets de la barra de tareas",
+      "category": "ui",
+      "risk": "low",
+      "requiresAdmin": false,
+      "requiresReboot": true,
+      "minBuild": 22000,
+      "consequences": [
+        "Desaparece el botón de widgets en la barra de tareas"
+      ],
+      "operations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarDa",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 0
+            }
+          }
+        }
+      ],
+      "reverseOperations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "TaskbarDa",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "lockscreen.no-spotlight",
+      "displayName": "Quitar anuncios de Spotlight en pantalla de bloqueo",
+      "description": "Desactiva las recomendaciones y anuncios de Windows en la pantalla de bloqueo",
+      "category": "privacy",
+      "risk": "low",
+      "requiresAdmin": true,
+      "requiresReboot": false,
+      "minBuild": 22000,
+      "consequences": [
+        "La pantalla de bloqueo no mostrará anuncios ni sugerencias de Windows"
+      ],
+      "operations": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent",
+          "name": "DisableWindowsConsumerFeatures",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 1
+            }
+          }
+        }
+      ],
+      "reverseOperations": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent",
+          "name": "DisableWindowsConsumerFeatures",
+          "op": "DeleteValue"
+        }
+      ]
+    },
+    {
+      "id": "start.no-suggestions",
+      "displayName": "Quitar sugerencias en menú Inicio",
+      "description": "Desactiva las sugerencias y recomendaciones en el menú Inicio",
+      "category": "privacy",
+      "risk": "low",
+      "requiresAdmin": false,
+      "requiresReboot": false,
+      "minBuild": 22000,
+      "consequences": [
+        "El menú Inicio no mostrará sugerencias de aplicaciones"
+      ],
+      "operations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-338388Enabled",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 0
+            }
+          }
+        }
+      ],
+      "reverseOperations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-338388Enabled",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "edge.no-startup-boost",
+      "displayName": "Desactivar precarga de Microsoft Edge",
+      "description": "Apaga la precarga automática de Edge al iniciar Windows",
+      "category": "performance",
+      "risk": "low",
+      "requiresAdmin": true,
+      "requiresReboot": false,
+      "minBuild": 22000,
+      "consequences": [
+        "Microsoft Edge no se precargará al arrancar el sistema"
+      ],
+      "operations": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "StartupBoostEnabled",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 0
+            }
+          }
+        }
+      ],
+      "reverseOperations": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "StartupBoostEnabled",
+          "op": "DeleteValue"
+        }
+      ]
+    },
+    {
+      "id": "explorer.show-extensions",
+      "displayName": "Mostrar extensiones de archivo",
+      "description": "Muestra las extensiones de archivo (.exe, .txt, etc.)",
+      "category": "ui",
+      "risk": "low",
+      "requiresAdmin": false,
+      "requiresReboot": false,
+      "minBuild": 22000,
+      "consequences": [
+        "Se mostrarán las extensiones de archivo en el Explorador"
+      ],
+      "operations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "HideFileExt",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 0
+            }
+          }
+        }
+      ],
+      "reverseOperations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "HideFileExt",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "explorer.show-hidden",
+      "displayName": "Mostrar archivos ocultos",
+      "description": "Muestra los archivos y carpetas ocultas en el Explorador",
+      "category": "ui",
+      "risk": "low",
+      "requiresAdmin": false,
+      "requiresReboot": false,
+      "minBuild": 22000,
+      "consequences": [
+        "Se mostrarán los archivos ocultos en el Explorador de Windows"
+      ],
+      "operations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "Hidden",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 1
+            }
+          }
+        }
+      ],
+      "reverseOperations": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "Hidden",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "telemetry.allow-zero",
+      "displayName": "Deshabilitar telemetría",
+      "description": "Establece el nivel de telemetría mínimo",
+      "category": "telemetry",
+      "risk": "medium",
+      "requiresAdmin": true,
+      "requiresReboot": false,
+      "minBuild": 22000,
+      "consequences": [
+        "Se minimiza la telemetría enviada a Microsoft"
+      ],
+      "operations": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+          "name": "AllowTelemetry",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 0
+            }
+          }
+        }
+      ],
+      "reverseOperations": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+          "name": "AllowTelemetry",
+          "op": "DeleteValue"
+        }
+      ]
+    },
+    {
+      "id": "cortana.disable",
+      "displayName": "Desactivar Cortana",
+      "description": "Apaga el asistente Cortana a través de política",
+      "category": "privacy",
+      "risk": "medium",
+      "requiresAdmin": true,
+      "requiresReboot": false,
+      "minBuild": 22000,
+      "consequences": [
+        "Cortana será desactivado en el sistema"
+      ],
+      "operations": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search",
+          "name": "AllowCortana",
+          "op": {
+            "SetValue": {
+              "kind": "Dword",
+              "value": 0
+            }
+          }
+        }
+      ],
+      "reverseOperations": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search",
+          "name": "AllowCortana",
+          "op": "DeleteValue"
+        }
+      ]
+    }
+  ]
+}
