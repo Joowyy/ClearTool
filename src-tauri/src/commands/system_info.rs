@@ -1,13 +1,25 @@
 // commands/system_info.rs — información general del sistema y elevación.
 
-use crate::elevation;
-use crate::error::{AppError, AppResult};
+use crate::error::AppResult;
 use crate::models::system::{DriveInfo, SystemSummary};
 use std::env;
 
 #[tauri::command]
 pub async fn is_elevated() -> bool {
-    elevation::is_elevated()
+    #[cfg(target_os = "windows")]
+    {
+        use std::process::Command;
+        Command::new("net")
+            .args(&["session"])
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    }
+    
+    #[cfg(not(target_os = "windows"))]
+    {
+        unsafe { libc::geteuid() == 0 }
+    }
 }
 
 #[tauri::command]
@@ -16,7 +28,7 @@ pub async fn system_summary() -> AppResult<SystemSummary> {
     let os_version = get_os_version();
     let build_number = get_build_number();
     let username = get_username();
-    let is_elevated = elevation::is_elevated();
+    let is_elevated = is_elevated().await;
     let total_ram_bytes = get_total_ram();
     let drives = get_drives_info()?;
 
@@ -51,7 +63,7 @@ fn get_os_version() -> String {
         .ok()
         .and_then(|output| String::from_utf8(output.stdout).ok())
         .map(|s| s.trim().to_string())
-        .unwrap_or_else(|| "Unknown".to_string())
+        .unwrap_or_else(|| "Windows".to_string())
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -121,7 +133,6 @@ fn get_total_ram() -> u64 {
 
 #[cfg(target_os = "windows")]
 fn get_drives_info() -> AppResult<Vec<DriveInfo>> {
-    use std::fs;
     use std::path::Path;
     
     let mut drives = Vec::new();
@@ -132,10 +143,10 @@ fn get_drives_info() -> AppResult<Vec<DriveInfo>> {
         let path = Path::new(&path_str);
         
         if path.exists() {
-            if let Ok(metadata) = fs::metadata(path) {
-                let total = get_drive_total_bytes(&path_str).unwrap_or(0);
-                let free = get_drive_free_bytes(&path_str).unwrap_or(0);
-                
+            let total = get_drive_total_bytes(&path_str).unwrap_or(0);
+            let free = get_drive_free_bytes(&path_str).unwrap_or(0);
+            
+            if total > 0 || free > 0 {
                 drives.push(DriveInfo {
                     letter: drive_letter,
                     total_bytes: total,
@@ -157,19 +168,19 @@ fn get_drives_info() -> AppResult<Vec<DriveInfo>> {
 #[cfg(target_os = "windows")]
 fn get_drive_total_bytes(drive: &str) -> Option<u64> {
     use windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExA;
-    use std::ffi::CString;
+    use windows::core::PCSTR;
     
-    let drive_cstr = CString::new(drive).ok()?;
+    let drive_bytes = drive.as_bytes();
     let mut total_bytes: u64 = 0;
     
     unsafe {
         if GetDiskFreeSpaceExA(
-            drive_cstr.as_ptr() as *const _,
+            PCSTR(drive_bytes.as_ptr()),
             None,
             Some(&mut total_bytes),
             None,
         )
-        .into()
+        .is_ok()
         {
             Some(total_bytes)
         } else {
@@ -186,19 +197,19 @@ fn get_drive_total_bytes(_drive: &str) -> Option<u64> {
 #[cfg(target_os = "windows")]
 fn get_drive_free_bytes(drive: &str) -> Option<u64> {
     use windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExA;
-    use std::ffi::CString;
+    use windows::core::PCSTR;
     
-    let drive_cstr = CString::new(drive).ok()?;
+    let drive_bytes = drive.as_bytes();
     let mut free_bytes: u64 = 0;
     
     unsafe {
         if GetDiskFreeSpaceExA(
-            drive_cstr.as_ptr() as *const _,
+            PCSTR(drive_bytes.as_ptr()),
             Some(&mut free_bytes),
             None,
             None,
         )
-        .into()
+        .is_ok()
         {
             Some(free_bytes)
         } else {
