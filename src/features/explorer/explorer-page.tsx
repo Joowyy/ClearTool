@@ -1,115 +1,89 @@
-import { useState, useCallback } from "react";
-import { FolderOpen, RefreshCw } from "lucide-react";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { formatBytes } from "../../lib/utils";
-import { EmptyState } from "../../components/empty-state";
-import { scanTree } from "../../lib/tauri";
+import { useCallback, useState } from "react";
 import { useTauriEvent } from "../../hooks/use-tauri-event";
-import type { TreeNode } from "../../bindings";
+import { useExplorerTree } from "./use-explorer-tree";
+import { TreeView } from "./tree-view";
+import type { TreeNode } from "../../api";
 
 export function ExplorerPage() {
-  const [rootPath, setRootPath] = useState("C:\\");
-  const [nodes, setNodes] = useState<TreeNode[]>([]);
-  const [scanning, setScanning] = useState(false);
+  const {
+    state,
+    scanRoot,
+    addNode,
+    scanDone,
+    expandNode,
+  } = useExplorerTree();
 
-  const handleNode = useCallback((node: TreeNode) => {
-    setNodes((prev) =>
-      [...prev, node].sort((a, b) => b.size_bytes - a.size_bytes)
-    );
-  }, []);
+  const [search, setSearch] = useState("");
+
+  const handleNode = useCallback(
+    (node: TreeNode) => {
+      addNode(node);
+    },
+    [addNode]
+  );
 
   const handleDone = useCallback(() => {
-    setScanning(false);
-  }, []);
+    scanDone();
+  }, [scanDone]);
 
-  useTauriEvent<TreeNode>("explorer:node", handleNode);
+  useTauriEvent("explorer:node", handleNode);
   useTauriEvent("explorer:done", handleDone);
 
-  const handleScan = async () => {
-    setNodes([]);
-    setScanning(true);
-    try {
-      await scanTree({
-        root: rootPath,
-        max_depth: 2,
-        follow_reparse_points: false,
-        include_hidden: true,
-        min_size_bytes: null,
-        size_strategy: "Logical",
-      });
-    } catch {
-      setScanning(false);
-    }
-  };
+  const handleScan = useCallback(
+    (path: string) => {
+      scanRoot(path);
+    },
+    [scanRoot]
+  );
+
+  const handleExpand = useCallback(
+    (path: string) => {
+      expandNode(path);
+    },
+    [expandNode]
+  );
+
+  const handleCancel = useCallback(() => {
+    // Cancelación: el backend actual no soporta cancel real,
+    // pero marcamos scanning = false en el frontend.
+    scanDone();
+  }, [scanDone]);
+
+  // Filtrar nodos por búsqueda local
+  const filteredNodes = search
+    ? state.nodes.filter(
+        (n) =>
+          n.name.toLowerCase().includes(search.toLowerCase()) ||
+          n.path.toLowerCase().includes(search.toLowerCase())
+      )
+    : state.nodes;
 
   return (
     <div className="p-6 h-full flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <h2 className="text-2xl font-bold">Explorador de archivos</h2>
-        {scanning && (
-          <span className="text-sm text-muted-foreground animate-pulse">
-            Escaneando...
-          </span>
-        )}
-      </div>
+      <TreeView
+        rootPath={state.rootPath}
+        nodes={filteredNodes}
+        scanning={state.scanning}
+        onScan={handleScan}
+        onExpand={handleExpand}
+        onCancel={handleCancel}
+      />
 
-      <div className="flex gap-2">
-        <Input
-          value={rootPath}
-          onChange={(e) => setRootPath(e.target.value)}
-          placeholder="Ruta raíz (ej. C:\)"
-          className="flex-1"
-          onKeyDown={(e) => e.key === "Enter" && handleScan()}
-        />
-        <Button onClick={handleScan} disabled={scanning}>
-          {scanning ? (
-            <RefreshCw className="h-4 w-4 animate-spin" />
-          ) : (
-            <FolderOpen className="h-4 w-4" />
+      {/* Barra de búsqueda local */}
+      {state.nodes.length > 0 && (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar en resultados..."
+            className="flex-1 px-3 py-1.5 text-sm bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          {search && (
+            <span className="text-xs text-muted-foreground">
+              {filteredNodes.length} de {state.nodes.length}
+            </span>
           )}
-          <span className="ml-2">{scanning ? "Escaneando..." : "Escanear"}</span>
-        </Button>
-      </div>
-
-      {nodes.length === 0 && !scanning ? (
-        <EmptyState
-          icon={FolderOpen}
-          title="Sin resultados"
-          description='Introduce una ruta y haz clic en "Escanear"'
-        />
-      ) : (
-        <div className="flex-1 overflow-auto border border-border rounded-lg">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-card border-b border-border z-10">
-              <tr>
-                <th className="text-left p-3 font-medium text-muted-foreground">Nombre</th>
-                <th className="text-left p-3 font-medium text-muted-foreground">Tipo</th>
-                <th className="text-right p-3 font-medium text-muted-foreground">Tamaño</th>
-              </tr>
-            </thead>
-            <tbody>
-              {nodes.map((node) => (
-                <tr
-                  key={node.path}
-                  className="border-b border-border/50 hover:bg-accent/30"
-                >
-                  <td className="p-3">
-                    <div className="font-medium truncate max-w-xs" title={node.path}>
-                      {node.name}
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate max-w-xs">
-                      {node.path}
-                    </div>
-                  </td>
-                  <td className="p-3 text-muted-foreground text-xs">{node.kind}</td>
-                  <td className="p-3 text-right font-mono text-xs">
-                    {formatBytes(node.size_bytes)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       )}
     </div>

@@ -1,20 +1,37 @@
-// ClearTool — punto de entrada de la librería.
+// ClearTool — bootstrap del backend Tauri.
 //
-// Estructura por capas:
-//   - commands/  : comandos Tauri expuestos al frontend (capa de IPC).
-//   - services/  : lógica de negocio (FS, registro, PowerShell, audit, etc.).
-//   - models/    : DTOs y tipos compartidos (serializables).
-//   - error.rs   : tipo de error unificado AppError.
-//   - elevation.rs: helpers de elevación de privilegios.
+// Topología (lee de arriba a abajo, no hay ciclos):
+//
+//   core      → error, config, util         (no depende de nada)
+//   platform  → Win32 / winreg / PowerShell (depende de core)
+//   domain    → reglas de negocio           (depende de core + platform + models)
+//   models    → DTOs serializables          (depende de serde solo)
+//   ipc       → #[tauri::command]           (depende de domain + models + core)
+//
+// El frontend NUNCA habla con platform o domain directamente — sólo con ipc.
 
-pub mod commands;
-pub mod error;
-pub mod elevation;
+pub mod core;
+pub mod domain;
+pub mod ipc;
 pub mod models;
-pub mod services;
+pub mod platform;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // En release, el manifest es `requireAdministrator` (Windows pide UAC al
+    // arrancar) y nunca llegamos aquí sin elevación. En debug usamos
+    // `asInvoker` para evitar el error 740 de `cargo run`; ahí NO relanzamos
+    // con UAC porque crearía un proceso descoordinado con `tauri dev`.
+    #[cfg(all(target_os = "windows", not(debug_assertions)))]
+    {
+        if !platform::elevation::is_elevated() {
+            if platform::elevation::try_relaunch_as_admin() {
+                std::process::exit(0);
+            }
+            // Usuario canceló UAC → app sigue en modo lectura
+        }
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -22,40 +39,61 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
+        .setup(|app| {
+            // Validar catálogos embebidos al arranque — detecta JSON corrupto
+            // en debug en vez de en el primer click de la UI.
+            domain::catalog::validate_all()
+                .expect("catálogos embebidos inválidos");
+
+            // En debug, abrir DevTools automáticamente para ver errores
+            // del frontend sin tener que hacer click derecho.
+            #[cfg(debug_assertions)]
+            {
+                use tauri::Manager;
+                if let Some(window) = app.get_webview_window("main") {
+                    window.open_devtools();
+                }
+            }
+            let _ = app;
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // system_info
-            commands::system_info::is_elevated,
-            commands::system_info::system_summary,
+            ipc::system_info::is_elevated,
+            ipc::system_info::system_summary,
+            ipc::system_info::relaunch_as_admin,
+            // telemetry (monitorización en vivo)
+            ipc::telemetry::get_telemetry_snapshot,
             // explorer
-            commands::explorer::scan_tree,
-            commands::explorer::cancel_scan,
-            commands::explorer::compute_directory_size,
+            ipc::explorer::scan_tree,
+            ipc::explorer::cancel_scan,
+            ipc::explorer::compute_directory_size,
             // cache
-            commands::cache::list_cache_locations,
-            commands::cache::scan_cache_locations,
-            commands::cache::clean_cache_locations,
+            ipc::cache::list_cache_locations,
+            ipc::cache::scan_cache_locations,
+            ipc::cache::clean_cache_locations,
             // debloat
-            commands::debloat::list_bloatware_catalog,
-            commands::debloat::detect_installed_bloatware,
-            commands::debloat::remove_bloatware,
+            ipc::debloat::list_bloatware_catalog,
+            ipc::debloat::detect_installed_bloatware,
+            ipc::debloat::remove_bloatware,
             // services
-            commands::services::list_services,
-            commands::services::set_service_state,
-            commands::services::apply_service_preset,
+            ipc::services::list_services,
+            ipc::services::set_service_state,
+            ipc::services::apply_service_preset,
             // registry
-            commands::registry::list_registry_tweaks,
-            commands::registry::read_registry_tweak_state,
-            commands::registry::apply_registry_tweak,
-            commands::registry::apply_registry_tweak_batch,
-            commands::registry::revert_registry_tweak,
+            ipc::registry::list_registry_tweaks,
+            ipc::registry::read_registry_tweak_state,
+            ipc::registry::apply_registry_tweak,
+            ipc::registry::apply_registry_tweak_batch,
+            ipc::registry::revert_registry_tweak,
             // restore
-            commands::restore::ensure_restore_enabled,
-            commands::restore::create_restore_point,
-            commands::restore::list_restore_points,
-            commands::restore::restore_to_point,
+            ipc::restore::ensure_restore_enabled,
+            ipc::restore::create_restore_point,
+            ipc::restore::list_restore_points,
+            ipc::restore::restore_to_point,
             // audit
-            commands::audit::list_audit_log,
-            commands::audit::revert_audit_entry,
+            ipc::audit::list_audit_log,
+            ipc::audit::revert_audit_entry,
         ])
         .run(tauri::generate_context!())
         .expect("error mientras se ejecuta la aplicación");

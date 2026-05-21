@@ -2,20 +2,41 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Envelope del JSON `bloatware-catalog.json`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BloatwareCatalogFile {
+    #[serde(default)]
+    pub version: String,
+    #[serde(default)]
+    pub updated_at: String,
+    pub entries: Vec<BloatwareEntry>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BloatwareEntry {
     pub id: String,
     pub display_name: String,
-    pub category: String,
-    pub removal_strategy: String,
+    #[serde(default)]
+    pub category: Option<String>,
+    #[serde(default)]
+    pub removal_strategy: Option<String>,
+    #[serde(default)]
     pub package_names: Vec<String>,
+    #[serde(default)]
     pub services: Vec<String>,
+    #[serde(default)]
     pub scheduled_tasks: Vec<String>,
-    pub risk: String,
+    #[serde(default)]
+    pub risk: Option<String>,
+    #[serde(default)]
     pub consequences: Vec<String>,
-    pub reversal_method: String,
-    pub reversal_details: String,
+    #[serde(default)]
+    pub reversal_method: Option<String>,
+    #[serde(default)]
+    pub reversal_details: Option<String>,
+    #[serde(default)]
     pub requires_elevation: bool,
 }
 

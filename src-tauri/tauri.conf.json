@@ -35,14 +35,16 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "windows": [
-      {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "signingIdentity": null,
-        "timestampUrl": ""
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "perMachine",
+        "displayLanguageSelector": false
       }
-    ]
+    }
   }
 }
 

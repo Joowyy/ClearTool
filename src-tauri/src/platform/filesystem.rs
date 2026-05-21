@@ -1,0 +1,238 @@
+// platform/filesystem.rs — operaciones de bajo nivel sobre el FS.
+//
+// Devuelve datos crudos (tamaños, listados); la decisión de qué borrar o
+// hasta qué profundidad recorrer es del `domain`, no de aquí.
+
+use crate::core::AppResult;
+use std::path::Path;
+use walkdir::WalkDir;
+
+/// Devuelve (bytes_lógicos, archivos, directorios) recorriendo `root`.
+/// No sigue symlinks ni junctions por defecto.
+pub fn directory_stats(root: &Path, follow_reparse_points: bool) -> AppResult<(u64, u64, u64)> {
+    if !root.exists() {
+        return Ok((0, 0, 0));
+    }
+
+    let mut bytes: u64 = 0;
+    let mut files: u64 = 0;
+    let mut dirs: u64 = 0;
+
+    let walker = WalkDir::new(root)
+        .follow_links(follow_reparse_points)
+        .into_iter()
+        .filter_map(|e| e.ok());
+
+    for entry in walker {
+        let ft = entry.file_type();
+        if ft.is_file() {
+            files += 1;
+            if let Ok(meta) = entry.metadata() {
+                bytes = bytes.saturating_add(meta.len());
+            }
+        } else if ft.is_dir() {
+            dirs += 1;
+        }
+    }
+    Ok((bytes, files, dirs))
+}
+
+/// Lista nivel a nivel (children directos). Para archivos devuelve el tamaño
+/// del metadata (operación O(1)). Para directorios devuelve 0 — el cómputo
+/// recursivo es caro (puede tardar minutos en un disco grande) y se hace
+/// on-demand vía `directory_stats` cuando el usuario expanda el directorio.
+pub fn list_children_with_sizes(
+    root: &Path,
+    _follow_reparse_points: bool,
+) -> AppResult<Vec<(String, String, bool, u64)>> {
+    let mut out = Vec::new();
+    let rd = match std::fs::read_dir(root) {
+        Ok(rd) => rd,
+        Err(_) => return Ok(out),
+    };
+
+    for entry in rd.flatten() {
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        let ft = match entry.file_type() {
+            Ok(ft) => ft,
+            Err(_) => continue,
+        };
+        let is_dir = ft.is_dir();
+        let size = if is_dir {
+            0
+        } else {
+            entry.metadata().map(|m| m.len()).unwrap_or(0)
+        };
+        out.push((path.to_string_lossy().to_string(), name, is_dir, size));
+    }
+    out.sort_by(|a, b| match (a.2, b.2) {
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a.1.to_lowercase().cmp(&b.1.to_lowercase()),
+    });
+    Ok(out)
+}
+
+/// Resultado de un intento de borrado recursivo robusto.
+pub struct DeleteResult {
+    pub bytes_freed: u64,
+    pub files_deleted: u64,
+    pub errors: Vec<String>,
+    pub pending_reboot: Vec<String>,
+}
+
+/// Borrado recursivo robusto.
+///
+/// 1. Recorre recursivamente todos los subdirectorios.
+/// 2. Intenta eliminar cada archivo individualmente, capturando errores.
+/// 3. Maneja archivos en uso:
+///    - Primero: intenta borrar normalmente.
+///    - Si falla: marca para borrado en el próximo reboot (pending_reboot).
+/// 4. Elimina directorios vacíos tras borrar su contenido (de dentro hacia fuera).
+/// 5. No falla silenciosamente: cada error se registra.
+pub fn delete_recursive_robust(root: &Path) -> DeleteResult {
+    let mut result = DeleteResult {
+        bytes_freed: 0,
+        files_deleted: 0,
+        errors: Vec::new(),
+        pending_reboot: Vec::new(),
+    };
+
+    if !root.exists() {
+        result.errors.push(format!("{}: path does not exist", root.display()));
+        return result;
+    }
+
+    // Contar antes de borrar.
+    if let Ok((b, f, _)) = directory_stats(root, false) {
+        result.bytes_freed = b;
+        result.files_deleted = f;
+    }
+
+    // Recopilar todos los archivos primero (hojas primero).
+    let mut all_entries: Vec<(std::path::PathBuf, bool)> = Vec::new();
+    collect_entries(root, &mut all_entries, &mut result);
+
+    // Borrar archivos primero, luego directorios (orden inverso = de dentro hacia fuera).
+    for (entry_path, is_dir) in all_entries.into_iter().rev() {
+        if is_dir {
+            match std::fs::remove_dir(&entry_path) {
+                Ok(()) => {}
+                Err(e) => {
+                    // Si el directorio no está vacío o está en uso, lo reportamos.
+                    if e.raw_os_error() == Some(145) || e.raw_os_error() == Some(32) {
+                        result.pending_reboot.push(entry_path.to_string_lossy().to_string());
+                    } else {
+                        result.errors.push(format!("{}: {}", entry_path.display(), e));
+                    }
+                }
+            }
+        } else {
+            match std::fs::remove_file(&entry_path) {
+                Ok(()) => {}
+                Err(e) => {
+                    // Error 32 = ERROR_SHARING_VIOLATION (archivo en uso)
+                    // Error 5 = ERROR_ACCESS_DENIED
+                    if e.raw_os_error() == Some(32) {
+                        #[cfg(windows)]
+                        {
+                            mark_for_reboot_deletion(&entry_path, &mut result);
+                        }
+                        #[cfg(not(windows))]
+                        {
+                            result.pending_reboot.push(entry_path.to_string_lossy().to_string());
+                        }
+                    } else {
+                        result.errors.push(format!("{}: {}", entry_path.display(), e));
+                    }
+                }
+            }
+        }
+    }
+
+    // Intentar borrar el root mismo.
+    if root.is_dir() {
+        if let Err(e) = std::fs::remove_dir(root) {
+            if e.raw_os_error() != Some(145) {
+                result.errors.push(format!("root {}: {}", root.display(), e));
+            }
+        }
+    } else {
+        if let Err(e) = std::fs::remove_file(root) {
+            result.errors.push(format!("root {}: {}", root.display(), e));
+        }
+    }
+
+    result
+}
+
+fn collect_entries(
+    root: &Path,
+    entries: &mut Vec<(std::path::PathBuf, bool)>,
+    result: &mut DeleteResult,
+) {
+    let rd = match std::fs::read_dir(root) {
+        Ok(rd) => rd,
+        Err(e) => {
+            result.errors.push(format!("{}: {}", root.display(), e));
+            return;
+        }
+    };
+
+    for entry in rd {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(e) => {
+                result.errors.push(format!("{}: {}", root.display(), e));
+                continue;
+            }
+        };
+
+        let path = entry.path();
+        let ft = match entry.file_type() {
+            Ok(ft) => ft,
+            Err(e) => {
+                result.errors.push(format!("{}: {}", path.display(), e));
+                continue;
+            }
+        };
+
+        if ft.is_dir() {
+            collect_entries(&path, entries, result);
+            entries.push((path, true));
+        } else {
+            entries.push((path, false));
+        }
+    }
+}
+
+#[cfg(windows)]
+fn mark_for_reboot_deletion(path: &std::path::Path, result: &mut DeleteResult) {
+    use std::os::windows::ffi::OsStrExt;
+    use windows::Win32::Storage::FileSystem::{MoveFileExW, MOVEFILE_DELAY_UNTIL_REBOOT};
+
+    let wide: Vec<u16> = path.as_os_str().encode_wide().chain(std::iter::once(0)).collect();
+
+    unsafe {
+        let res = MoveFileExW(
+            windows::core::PCWSTR(wide.as_ptr()),
+            None,
+            MOVEFILE_DELAY_UNTIL_REBOOT,
+        );
+        if res.is_ok() {
+            result.pending_reboot.push(path.to_string_lossy().to_string());
+        } else {
+            result.errors.push(format!(
+                "{}: file in use, could not schedule for reboot deletion",
+                path.display()
+            ));
+        }
+    }
+}
+
+/// Legacy alias — mantiene compatibilidad con código existente.
+pub fn delete_recursive(root: &Path) -> (u64, u64, Vec<String>) {
+    let result = delete_recursive_robust(root);
+    (result.bytes_freed, result.files_deleted, result.errors)
+}
