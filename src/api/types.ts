@@ -367,3 +367,110 @@ export interface Settings {
   behavior: BehaviorSettings;
   advanced: AdvancedSettings;
 }
+
+// ── Cache Engine v2: CleanPlan ───────────────────────────────────────────
+
+export type CleanStrategy =
+  | "direct-delete"
+  | { uwpAppAware: { packageFamilyName: string } }
+  | "browser-aware"
+  | "process-locked"
+  | "system-restart-required"
+  | "take-ownership-and-delete";
+
+export interface ReadyLocation {
+  id: string;
+  displayName: string;
+  resolvedPath: string;
+  bytes: number;
+  fileCount: number;
+  strategy: CleanStrategy;
+  ageOldestFile: string | null;
+}
+
+export type BlockedAction =
+  | { kind: "closeProcess"; pid: number; processName: string }
+  | { kind: "scheduleReboot" }
+  | { kind: "skipOnly"; reason: string };
+
+export interface BlockedLocation {
+  id: string;
+  displayName: string;
+  resolvedPath: string;
+  bytes: number;
+  lockedBy: LockingProcess[];
+  suggestedAction: BlockedAction;
+}
+
+export interface PermissionLocation {
+  id: string;
+  displayName: string;
+  resolvedPath: string;
+  bytes: number;
+  reason: string;
+}
+
+export type SkipReason =
+  | "does-not-exist"
+  | "empty"
+  | "disallowed-by-allowlist"
+  | { precondition: { name: string } };
+
+export interface SkippedLocation {
+  id: string;
+  displayName: string;
+  reason: SkipReason;
+}
+
+export interface CleanPlan {
+  planId: string;
+  generatedAt: string;
+  ready: ReadyLocation[];
+  blocked: BlockedLocation[];
+  permissionIssues: PermissionLocation[];
+  skipped: SkippedLocation[];
+  totalEstimatedBytes: number;
+  totalBlockedBytes: number;
+}
+
+export interface ExecutePlanOpts {
+  planId: string;
+  autoCloseBlocking: boolean;
+  scheduleBlockedForReboot: boolean;
+  dryRun: boolean;
+  createRestorePoint: boolean;
+  timeoutPerLocationSecs: number;
+}
+
+export type LocationStatus = "cleaned" | "partial-reboot" | "skipped" | "failed";
+
+export interface LocationResult {
+  id: string;
+  status: LocationStatus;
+  bytesFreed: number;
+  bytesScheduled: number;
+  filesDeleted: number;
+  filesScheduled: number;
+  filesFailed: number;
+  error: string | null;
+  durationMs: number;
+}
+
+export interface CleanReportV2 {
+  planId: string;
+  runId: string;
+  startedAt: string;
+  finishedAt: string;
+  restorePointSeq: number | null;
+  perLocation: LocationResult[];
+  totalBytesFreed: number;
+  totalBytesScheduledReboot: number;
+  totalBytesFailed: number;
+  closedProcesses: number[];
+}
+
+export interface PendingRename {
+  source: string;
+  destination: string;
+  isDelete: boolean;
+}
