@@ -1,6 +1,8 @@
 import { createBrowserRouter } from "react-router-dom";
+import { Suspense } from "react";
 import { AppShell } from "./components/layout/app-shell";
 import { ErrorBoundary } from "./components/error-boundary";
+import { TableSkeleton } from "./components/ui/table-skeleton";
 import { HomePage } from "./features/home/home-page";
 import { ExplorerPage } from "./features/explorer/explorer-page";
 import { CachePage } from "./features/cache-cleaner/cache-page";
@@ -12,7 +14,17 @@ import { AuditPage } from "./features/audit-log/audit-page";
 import { SettingsPage } from "./features/settings/settings-page";
 import { ProcessesPage } from "./features/processes/processes-page";
 import { StartupPage } from "./features/startup/startup-page";
+import { DiskPage } from "./features/disk/disk-page";
+import { PrivacyPage } from "./features/privacy/privacy-page";
 import { ROUTES } from "./lib/routes";
+
+function LazyPage({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<TableSkeleton rows={8} columns={4} className="p-4" />}>
+      {children}
+    </Suspense>
+  );
+}
 
 export const router = createBrowserRouter([
   {
@@ -20,17 +32,19 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     errorElement: <ErrorBoundary />,
     children: [
-      { index: true, element: <HomePage /> },
-      { path: ROUTES.EXPLORER, element: <ExplorerPage /> },
-      { path: ROUTES.CACHE, element: <CachePage /> },
-      { path: ROUTES.DEBLOAT, element: <DebloatPage /> },
-      { path: ROUTES.SERVICES, element: <ServicesPage /> },
-      { path: ROUTES.REGISTRY, element: <RegistryPage /> },
-      { path: ROUTES.RESTORE, element: <RestorePage /> },
-      { path: ROUTES.AUDIT, element: <AuditPage /> },
-      { path: ROUTES.PROCESSES, element: <ProcessesPage /> },
-      { path: ROUTES.STARTUP, element: <StartupPage /> },
-      { path: ROUTES.SETTINGS, element: <SettingsPage /> },
+      { index: true, element: <LazyPage><HomePage /></LazyPage> },
+      { path: ROUTES.EXPLORER, element: <LazyPage><ExplorerPage /></LazyPage> },
+      { path: ROUTES.CACHE, element: <LazyPage><CachePage /></LazyPage> },
+      { path: ROUTES.DEBLOAT, element: <LazyPage><DebloatPage /></LazyPage> },
+      { path: ROUTES.SERVICES, element: <LazyPage><ServicesPage /></LazyPage> },
+      { path: ROUTES.REGISTRY, element: <LazyPage><RegistryPage /></LazyPage> },
+      { path: ROUTES.RESTORE, element: <LazyPage><RestorePage /></LazyPage> },
+      { path: ROUTES.AUDIT, element: <LazyPage><AuditPage /></LazyPage> },
+      { path: ROUTES.PROCESSES, element: <LazyPage><ProcessesPage /></LazyPage> },
+      { path: ROUTES.STARTUP, element: <LazyPage><StartupPage /></LazyPage> },
+      { path: ROUTES.DISK, element: <LazyPage><DiskPage /></LazyPage> },
+      { path: ROUTES.PRIVACY, element: <LazyPage><PrivacyPage /></LazyPage> },
+      { path: ROUTES.SETTINGS, element: <LazyPage><SettingsPage /></LazyPage> },
     ],
   },
 ]);

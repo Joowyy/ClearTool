@@ -54,3 +54,18 @@ pub fn ensure_or_create(description: &str) -> AppResult<Option<u32>> {
     })?;
     Ok(Some(report.sequence_number))
 }
+
+/// Crea un restore point de forma simple. Si System Protection está OFF,
+/// loggea un warning pero no falla (operaciones de red pueden continuar).
+pub fn create_restore_point(description: &str) -> AppResult<()> {
+    if !platform::restore_point::is_enabled()? {
+        log::warn!("System Protection OFF — create_restore_point skipped: {}", description);
+        return Ok(());
+    }
+    let _ = create(&CreateRestorePointInput {
+        description: description.to_string(),
+        restore_type: Some(0),
+        bypass_throttle: true,
+    })?;
+    Ok(())
+}

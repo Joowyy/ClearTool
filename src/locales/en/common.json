@@ -1,0 +1,77 @@
+{
+  "app": {
+    "name": "ClearTool",
+    "version": "v0.5"
+  },
+  "nav": {
+    "home": "Home",
+    "explorer": "Explorer",
+    "cache": "Cache",
+    "debloat": "Debloat",
+    "services": "Services",
+    "registry": "Registry",
+    "restore": "Restore",
+    "audit": "Audit",
+    "processes": "Processes",
+    "startup": "Startup",
+    "disk": "Disk",
+    "privacy": "Privacy",
+    "settings": "Settings"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "enable": "Enable",
+    "disable": "Disable",
+    "save": "Save",
+    "search": "Search",
+    "noResults": "No results",
+    "retry": "Retry",
+    "back": "Back"
+  },
+  "cache": {
+    "title": "Cache Cleaner",
+    "scan": "Scan",
+    "clean": "Clean",
+    "dryRun": "Dry run",
+    "scanning": "Scanning...",
+    "cleaning": "Cleaning...",
+    "noCache": "No cache found to clean",
+    "selectLocations": "Select locations to clean"
+  },
+  "debloat": {
+    "title": "Debloat",
+    "detectInstalled": "Detect installed",
+    "remove": "Remove",
+    "dryRun": "Dry run",
+    "presets": {
+      "minimal": "Minimal",
+      "recommended": "Recommended",
+      "total": "Total"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "safety": "Safety",
+    "behavior": "Behavior",
+    "advanced": "Advanced",
+    "theme": "Theme",
+    "density": "Density",
+    "language": "Language",
+    "sidebarCollapsed": "Collapsed sidebar",
+    "followSystem": "Follow system",
+    "themes": {
+      "darkCyan": "Dark Cyan",
+      "darkAmber": "Dark Amber",
+      "light": "Light"
+    },
+    "densities": {
+      "comfortable": "Comfortable",
+      "compact": "Compact"
+    }
+  }
+}

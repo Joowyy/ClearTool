@@ -57,6 +57,22 @@ export interface DirectorySize {
   dirCount: number;
 }
 
+export interface TreemapNode {
+  name: string;
+  path: string;
+  sizeBytes: number;
+  kind: NodeKind;
+  extension: string | null;
+  children: TreemapNode[];
+}
+
+export interface BuildTreemapInput {
+  root: string;
+  maxDepth?: number;
+  minSizeMb?: number;
+  followReparsePoints?: boolean;
+}
+
 export interface CacheLocation {
   id: string;
   displayName: string;

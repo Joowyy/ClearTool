@@ -10,4 +10,6 @@ export const ROUTES = {
   SETTINGS: "/settings",
   PROCESSES: "/processes",
   STARTUP: "/startup",
+  DISK: "/disk",
+  PRIVACY: "/privacy",
 } as const;

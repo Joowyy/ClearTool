@@ -131,6 +131,15 @@ pub fn run() {
             ipc::startup::list_startup,
             ipc::startup::disable_startup,
             ipc::startup::enable_startup,
+            // disk analyzer
+            ipc::disk::build_treemap_data,
+            // network utilities
+            ipc::network::flush_dns,
+            ipc::network::renew_ip,
+            ipc::network::reset_winsock,
+            ipc::network::reset_tcpip,
+            ipc::network::reset_proxy,
+            ipc::network::restore_hosts_file,
         ])
         .run(tauri::generate_context!())
         .expect("error mientras se ejecuta la aplicación");

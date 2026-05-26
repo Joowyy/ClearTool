@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
-import { Moon, Sun, Monitor, RotateCcw, FolderOpen, AlertTriangle, Save, RefreshCw } from "lucide-react";
+import { Moon, Sun, RotateCcw, FolderOpen, AlertTriangle, Save, RefreshCw, Palette, LayoutGrid, Columns2 } from "lucide-react";
 import {
   getSettings,
   updateSettings,
@@ -16,9 +16,10 @@ import {
   type Settings,
 } from "../../api";
 import { formatError } from "../../lib/errors";
+import { cn } from "../../lib/utils";
 
 export function SettingsPage() {
-  const { setTheme } = useAppStore();
+  const { theme, setTheme, density, setDensity, sidebarCollapsed, toggleSidebar } = useAppStore();
   const qc = useQueryClient();
   const [localSettings, setLocalSettings] = useState<Settings | null>(null);
 
@@ -56,7 +57,7 @@ export function SettingsPage() {
   const active = localSettings ?? settings;
 
   if (isLoading) {
-    return <div className="p-6 text-muted-foreground">Cargando ajustes...</div>;
+    return <div className="p-6 text-ink-tertiary">Cargando ajustes...</div>;
   }
 
   if (!active) return null;
@@ -83,12 +84,6 @@ export function SettingsPage() {
 
   const handleReset = () => {
     resetMutation.mutate();
-  };
-
-  const syncTheme = () => {
-    if (settings) {
-      setTheme(settings.appearance.theme as "dark" | "light" | "system");
-    }
   };
 
   return (
@@ -130,59 +125,84 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle>Apariencia</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5">
           <div>
             <label className="text-sm font-medium mb-2 block">Tema visual</label>
             <div className="flex gap-2">
-              <Button
-                variant={active.appearance.theme === "dark" ? "default" : "outline"}
-                size="sm"
-                onClick={() => updateNested("appearance", "theme", "dark")}
+              <button
+                onClick={() => setTheme("dark-cyan")}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-colors duration-120 min-w-[90px]",
+                  theme === "dark-cyan"
+                    ? "border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan"
+                    : "border-edge-default/10 text-ink-secondary hover:text-ink-primary hover:bg-surface-2",
+                )}
               >
-                <Moon className="h-4 w-4 mr-1" /> Oscuro
-              </Button>
-              <Button
-                variant={active.appearance.theme === "light" ? "default" : "outline"}
-                size="sm"
-                onClick={() => updateNested("appearance", "theme", "light")}
+                <Moon className="h-5 w-5" />
+                <span className="text-xs font-medium">Cyan</span>
+              </button>
+              <button
+                onClick={() => setTheme("dark-amber")}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-colors duration-120 min-w-[90px]",
+                  theme === "dark-amber"
+                    ? "border-signal-amber/40 bg-signal-amber/10 text-signal-amber"
+                    : "border-edge-default/10 text-ink-secondary hover:text-ink-primary hover:bg-surface-2",
+                )}
               >
-                <Sun className="h-4 w-4 mr-1" /> Claro
-              </Button>
-              <Button
-                variant={active.appearance.theme === "system" ? "default" : "outline"}
-                size="sm"
-                onClick={() => updateNested("appearance", "theme", "system")}
+                <Palette className="h-5 w-5" />
+                <span className="text-xs font-medium">Ámbar</span>
+              </button>
+              <button
+                onClick={() => setTheme("light")}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-colors duration-120 min-w-[90px]",
+                  theme === "light"
+                    ? "border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan"
+                    : "border-edge-default/10 text-ink-secondary hover:text-ink-primary hover:bg-surface-2",
+                )}
               >
-                <Monitor className="h-4 w-4 mr-1" /> Sistema
-              </Button>
+                <Sun className="h-5 w-5" />
+                <span className="text-xs font-medium">Claro</span>
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={syncTheme}>
-              Sincronizar tema con la UI
-            </Button>
-          </div>
+
           <div>
-            <label className="text-sm font-medium mb-1 block">Idioma</label>
-            <Input
-              value={active.appearance.language}
-              onChange={(e) => updateNested("appearance", "language", e.target.value)}
-              className="max-w-xs"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Densidad</label>
+            <label className="text-sm font-medium mb-2 block">Densidad</label>
             <div className="flex gap-2">
-              {["compact", "normal", "comfortable"].map((d) => (
-                <Button
-                  key={d}
-                  variant={active.appearance.density === d ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => updateNested("appearance", "density", d)}
-                >
-                  {d === "compact" ? "Compacta" : d === "normal" ? "Normal" : "Cómoda"}
-                </Button>
-              ))}
+              <button
+                onClick={() => setDensity("comfortable")}
+                className={cn(
+                  "flex items-center gap-2 px-3 h-8 rounded-md text-xs font-medium border transition-colors duration-120",
+                  density === "comfortable"
+                    ? "border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan"
+                    : "border-edge-default/10 text-ink-secondary hover:text-ink-primary hover:bg-surface-2",
+                )}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Cómoda
+              </button>
+              <button
+                onClick={() => setDensity("compact")}
+                className={cn(
+                  "flex items-center gap-2 px-3 h-8 rounded-md text-xs font-medium border transition-colors duration-120",
+                  density === "compact"
+                    ? "border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan"
+                    : "border-edge-default/10 text-ink-secondary hover:text-ink-primary hover:bg-surface-2",
+                )}
+              >
+                <Columns2 className="h-3.5 w-3.5" />
+                Compacta
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Checkbox checked={sidebarCollapsed} onCheckedChange={() => toggleSidebar()} />
+            <div>
+              <div className="text-sm font-medium">Sidebar colapsado</div>
+              <div className="text-xs text-ink-tertiary">Mostrar solo iconos en la navegación lateral</div>
             </div>
           </div>
         </CardContent>
@@ -335,7 +355,7 @@ export function SettingsPage() {
         <CardContent className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Versión</span>
-            <Badge variant="secondary">0.1.0</Badge>
+            <Badge variant="secondary">0.5.0</Badge>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Stack</span>

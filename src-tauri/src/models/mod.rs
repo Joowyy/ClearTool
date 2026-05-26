@@ -7,6 +7,7 @@
 
 pub mod cache;
 pub mod debloat;
+pub mod disk;
 pub mod pending_rename;
 pub mod process;
 pub mod registry;

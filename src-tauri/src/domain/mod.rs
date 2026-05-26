@@ -8,6 +8,7 @@ pub mod audit;
 pub mod cache;
 pub mod catalog;
 pub mod debloat;
+pub mod disk;
 pub mod explorer;
 pub mod registry;
 pub mod restore;

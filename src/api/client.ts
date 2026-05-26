@@ -8,6 +8,7 @@ import type {
   ApplyTweakInput,
   AuditEntry,
   BloatwareEntry,
+  BuildTreemapInput,
   CacheLocation,
   CacheScanReport,
   CleanCacheInput,
@@ -29,6 +30,7 @@ import type {
   ScanTreeHandle,
   ScanTreeInput,
   StartupEntry,
+  TreemapNode,
   TreeNode,
   Service,
   Settings,
@@ -120,6 +122,13 @@ async function initInvoke(): Promise<void> {
         list_startup: [],
         disable_startup: undefined,
         enable_startup: undefined,
+        build_treemap_data: { name: "C:\\", path: "C:\\", sizeBytes: 0, kind: "Dir", extension: null, children: [] },
+        flush_dns: undefined,
+        renew_ip: undefined,
+        reset_winsock: undefined,
+        reset_tcpip: undefined,
+        reset_proxy: undefined,
+        restore_hosts_file: undefined,
       };
 
       cachedInvoke = async <T>(command: string, _args?: Record<string, unknown>): Promise<T> => {
@@ -262,3 +271,15 @@ export const releaseCaches = () => invoke<ReleaseReport>("release_caches");
 export const listStartup = () => invoke<StartupEntry[]>("list_startup");
 export const disableStartup = (id: string) => invoke<void>("disable_startup", { id });
 export const enableStartup = (id: string) => invoke<void>("enable_startup", { id });
+
+// ── disk analyzer ───────────────────────────────────────────────────────
+export const buildTreemapData = (input: BuildTreemapInput) =>
+  invoke<TreemapNode>("build_treemap_data", { input });
+
+// ── network utilities ───────────────────────────────────────────────────
+export const flushDns = (dryRun: boolean) => invoke<void>("flush_dns", { dryRun });
+export const renewIp = (dryRun: boolean) => invoke<void>("renew_ip", { dryRun });
+export const resetWinsock = (dryRun: boolean) => invoke<void>("reset_winsock", { dryRun });
+export const resetTcpip = (dryRun: boolean) => invoke<void>("reset_tcpip", { dryRun });
+export const resetProxy = (dryRun: boolean) => invoke<void>("reset_proxy", { dryRun });
+export const restoreHostsFile = (dryRun: boolean) => invoke<void>("restore_hosts_file", { dryRun });
