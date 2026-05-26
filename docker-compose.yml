@@ -1,0 +1,47 @@
+# ============================================================
+# ClearTool — Docker Compose
+# ============================================================
+# Servicios disponibles:
+#
+#   web       — Frontend React como app web (puerto 8080)
+#   tauri     — Binario Tauri con X11 (requiere host con display)
+#
+# Uso:
+#   docker compose up web          → http://localhost:8080
+#   docker compose up tauri        → abre ventana Tauri (necesita X11)
+# ============================================================
+
+services:
+  # ── Modo Web: frontend estático servido por nginx ──
+  web:
+    build:
+      context: .
+      target: web-runtime
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Modo Tauri: binario nativo con X11 forwarding ──
+  tauri:
+    build:
+      context: .
+      target: tauri-runtime
+    profiles:
+      - gui
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - XDG_RUNTIME_DIR=/tmp/runtime
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${HOME}/.config/ClearTool:/root/.config/ClearTool:rw
+      - ${HOME}/.local/share/ClearTool:/root/.local/share/ClearTool:rw
+    # Necesario para que el contenedor pueda conectarse al X server del host
+    network_mode: host
+    # Opcional: permitir acceso al audio del host
+    # devices:
+    #   - /dev/snd:/dev/snd

@@ -32,29 +32,40 @@ pub fn run() {
         }
     }
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_process::init());
+
+    // decorum: titlebar HTML custom conservando Snap Layouts de Win11.
+    // Solo en Windows — en Linux usamos decoraciones nativas del WM.
+    #[cfg(target_os = "windows")]
+    let builder = builder.plugin(tauri_plugin_decorum::init());
+
+    builder
         .setup(|app| {
+            // Inicializar preferencias persistentes.
+            crate::core::settings::init();
+
             // Validar catálogos embebidos al arranque — detecta JSON corrupto
             // en debug en vez de en el primer click de la UI.
             domain::catalog::validate_all()
                 .expect("catálogos embebidos inválidos");
 
-            // En debug, abrir DevTools automáticamente para ver errores
-            // del frontend sin tener que hacer click derecho.
-            #[cfg(debug_assertions)]
-            {
-                use tauri::Manager;
-                if let Some(window) = app.get_webview_window("main") {
-                    window.open_devtools();
-                }
+            use tauri::Manager;
+            if let Some(window) = app.get_webview_window("main") {
+                // Nota: NO llamamos a `create_overlay_titlebar()` porque la
+                // X y demás botones los pinta nuestra titlebar HTML.
+                // decorum sigue cargado para `show_snap_overlay` (Win+Z) si
+                // queremos preservar Snap Layouts vía atajo de teclado.
+
+                // En debug, abrir DevTools para ver errores del frontend.
+                #[cfg(debug_assertions)]
+                window.open_devtools();
             }
-            let _ = app;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -66,6 +77,7 @@ pub fn run() {
             ipc::telemetry::get_telemetry_snapshot,
             // explorer
             ipc::explorer::scan_tree,
+            ipc::explorer::list_dir,
             ipc::explorer::cancel_scan,
             ipc::explorer::compute_directory_size,
             // cache
@@ -79,6 +91,7 @@ pub fn run() {
             // services
             ipc::services::list_services,
             ipc::services::set_service_state,
+            ipc::services::service_dependencies,
             ipc::services::apply_service_preset,
             // registry
             ipc::registry::list_registry_tweaks,
@@ -88,12 +101,29 @@ pub fn run() {
             ipc::registry::revert_registry_tweak,
             // restore
             ipc::restore::ensure_restore_enabled,
+            ipc::restore::enable_system_protection,
             ipc::restore::create_restore_point,
             ipc::restore::list_restore_points,
             ipc::restore::restore_to_point,
             // audit
             ipc::audit::list_audit_log,
             ipc::audit::revert_audit_entry,
+            ipc::audit::audit_log_path,
+            // settings
+            ipc::settings::get_settings,
+            ipc::settings::update_settings,
+            ipc::settings::reset_settings_to_defaults,
+            ipc::settings::settings_file_path,
+            ipc::settings::open_settings_file,
+            // processes
+            ipc::processes::list_processes,
+            ipc::processes::kill_process,
+            ipc::processes::kill_process_tree,
+            ipc::processes::suspend_process,
+            ipc::processes::resume_process,
+            ipc::processes::close_gracefully,
+            ipc::processes::who_locks_path,
+            ipc::processes::release_caches,
         ])
         .run(tauri::generate_context!())
         .expect("error mientras se ejecuta la aplicación");

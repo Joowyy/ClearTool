@@ -7,8 +7,11 @@
 
 pub mod cache;
 pub mod debloat;
+pub mod process;
 pub mod registry;
 pub mod restore;
 pub mod service;
+pub mod settings;
 pub mod system;
+pub mod telemetry;
 pub mod tree;

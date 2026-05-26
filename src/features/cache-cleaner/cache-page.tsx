@@ -5,12 +5,18 @@ import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Badge } from "../../components/ui/badge";
 import { formatBytes } from "../../lib/utils";
-import { listCacheLocations, scanCacheLocations, cleanCacheLocations } from "../../lib/tauri";
-import type { CacheLocation, CacheScanReport } from "../../bindings";
+import {
+  listCacheLocations,
+  scanCacheLocations,
+  cleanCacheLocations,
+  type CacheLocation,
+  type CacheScanReport,
+} from "../../api";
 import { EmptyState } from "../../components/empty-state";
+import { formatError } from "../../lib/errors";
 
-function riskVariant(risk: string): "success" | "warning" | "destructive" {
-  const r = risk.toLowerCase();
+function riskVariant(risk?: string | null): "success" | "warning" | "destructive" {
+  const r = (risk ?? "").toLowerCase();
   if (r === "high") return "destructive";
   if (r === "medium") return "warning";
   return "success";
@@ -21,7 +27,11 @@ export function CachePage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [scanReports, setScanReports] = useState<Map<string, CacheScanReport>>(new Map());
 
-  const { data: locations = [], isLoading } = useQuery({
+  const {
+    data: locations = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["cache-locations"],
     queryFn: listCacheLocations,
   });
@@ -39,9 +49,9 @@ export function CachePage() {
     mutationFn: () =>
       cleanCacheLocations({
         ids: Array.from(selected),
-        dry_run: false,
-        create_restore_point: true,
-        force_close_processes: false,
+        dryRun: false,
+        createRestorePoint: true,
+        forceCloseProcesses: false,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["cache-locations"] });
@@ -63,9 +73,19 @@ export function CachePage() {
 
   const totalBytes = Array.from(scanReports.values())
     .filter((r) => selected.has(r.id))
-    .reduce((s, r) => s + r.bytes_after_filters, 0);
+    .reduce((s, r) => s + r.bytesAfterFilters, 0);
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Cargando...</div>;
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-red-300 text-sm whitespace-pre-wrap">
+          Error al cargar el catálogo: {formatError(error)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 flex flex-col gap-4 h-full">
@@ -142,19 +162,23 @@ export function CachePage() {
                       />
                     </td>
                     <td className="p-3">
-                      <div className="font-medium">{loc.display_name}</div>
+                      <div className="font-medium">{loc.displayName}</div>
                       <div className="text-xs text-muted-foreground font-mono">
-                        {loc.path_template}
+                        {loc.path}
                       </div>
                     </td>
                     <td className="p-3">
-                      <Badge variant="secondary">{loc.category}</Badge>
+                      {loc.category ? (
+                        <Badge variant="secondary">{loc.category}</Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="p-3">
-                      <Badge variant={riskVariant(loc.risk)}>{loc.risk}</Badge>
+                      <Badge variant={riskVariant(loc.risk)}>{loc.risk ?? "low"}</Badge>
                     </td>
                     <td className="p-3 text-right text-muted-foreground text-xs">
-                      {loc.average_size ?? "—"}
+                      {loc.averageSize ?? "—"}
                     </td>
                     <td className="p-3 text-right font-mono text-xs">
                       {report ? formatBytes(report.bytes) : "—"}
@@ -170,8 +194,8 @@ export function CachePage() {
       {cleanMutation.isSuccess && (
         <div className="p-3 bg-green-900/30 border border-green-700/50 rounded-lg text-green-400 text-sm">
           Limpieza completada:{" "}
-          {formatBytes(cleanMutation.data?.total_bytes_freed ?? 0)} liberados,{" "}
-          {cleanMutation.data?.total_files_deleted ?? 0} archivos eliminados.
+          {formatBytes(cleanMutation.data?.totalBytesFreed ?? 0)} liberados,{" "}
+          {cleanMutation.data?.totalFilesDeleted ?? 0} archivos eliminados.
         </div>
       )}
     </div>

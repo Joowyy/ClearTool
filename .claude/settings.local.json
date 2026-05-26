@@ -4,7 +4,22 @@
       "Bash(cargo check *)",
       "Bash(npm install *)",
       "Bash(npx tsc *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(echo \"tsc=$?\")",
+      "Bash(mkdir -p \"z:/NewEra/Proyectos/ProyectosPersonales/ClearTool/.claude/specs/v1\")",
+      "Bash(mkdir -p \"z:/NewEra/Proyectos/ProyectosPersonales/ClearTool/.claude/specs/v1/04-modules\")",
+      "Bash(mkdir -p \"z:/NewEra/Proyectos/ProyectosPersonales/ClearTool/.claude/specs/v2\")",
+      "Bash(mkdir -p \"z:/NewEra/Proyectos/ProyectosPersonales/ClearTool/.claude/specs/v2/04-modules\")",
+      "Bash(cp 00-overview.md v1/)",
+      "Bash(cp 01-architecture.md v1/)",
+      "Bash(cp 02-backend-rust.md v1/)",
+      "Bash(cp 03-frontend-react.md v1/)",
+      "Bash(cp 05-security.md v1/)",
+      "Bash(rmdir 'z:/NewEra/Proyectos/ProyectosPersonales/ClearTool/.claude/specs/v2/04-modules' 2>&1 && echo \"Carpeta vacía eliminada\")"
+    ],
+    "additionalDirectories": [
+      "z:\\NewEra\\Proyectos\\ProyectosPersonales\\ClearTool\\.claude\\specs\\v2\\04-modules"
     ]
   }
 }

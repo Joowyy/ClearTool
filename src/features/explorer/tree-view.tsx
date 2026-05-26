@@ -5,6 +5,7 @@ import { Input } from "../../components/ui/input";
 import { TreeRow } from "./tree-row";
 import { EmptyState } from "../../components/empty-state";
 import type { TreeNode } from "../../api";
+import type { NodeState } from "./use-explorer-tree";
 
 interface TreeViewProps {
   rootPath: string;
@@ -13,9 +14,10 @@ interface TreeViewProps {
   onScan: (path: string) => void;
   onExpand: (path: string) => void;
   onCancel: () => void;
+  byPath: Map<string, NodeState>;
 }
 
-export function TreeView({ rootPath, nodes, scanning, onScan, onExpand, onCancel }: TreeViewProps) {
+export function TreeView({ rootPath, nodes, scanning, onScan, onExpand, onCancel, byPath }: TreeViewProps) {
   return (
     <div className="flex flex-col gap-4 h-full">
       <div className="flex items-center gap-3">
@@ -89,6 +91,7 @@ export function TreeView({ rootPath, nodes, scanning, onScan, onExpand, onCancel
                   node={node}
                   depth={0}
                   onExpand={onExpand}
+                  byPath={byPath}
                 />
               ))}
             </tbody>

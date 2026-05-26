@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { isElevated } from "../lib/tauri";
+import { isElevated } from "../api";
 import { useAppStore } from "../lib/store";
 
 export function useElevation() {

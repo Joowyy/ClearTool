@@ -1,0 +1,261 @@
+{
+  "$schema": "./services-catalog.schema.json",
+  "version": "0.1.0",
+  "updatedAt": "2026-05-10",
+  "presets": {
+    "TelemetryOff": [
+      "DiagTrack",
+      "dmwappushservice",
+      "diagnosticshub.standardcollector.service"
+    ],
+    "XboxOff": [
+      "XblAuthManager",
+      "XblGameSave",
+      "XboxNetApiSvc",
+      "XboxGipSvc"
+    ],
+    "PrintOff": [
+      "Spooler",
+      "PrintNotify"
+    ],
+    "FullDebloat": [
+      "DiagTrack",
+      "dmwappushservice",
+      "MapsBroker",
+      "WMPNetworkSvc",
+      "RetailDemo",
+      "WerSvc",
+      "Fax",
+      "lfsvc",
+      "SCardSvr",
+      "WbioSrvc",
+      "TabletInputService",
+      "SharedAccess",
+      "RemoteRegistry",
+      "SSDPSRV",
+      "WSearch?optional"
+    ]
+  },
+  "services": [
+    {
+      "name": "DiagTrack",
+      "displayName": "Connected User Experiences and Telemetry",
+      "category": "telemetry",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Apaga la telemetría principal a Microsoft."
+      ]
+    },
+    {
+      "name": "dmwappushservice",
+      "displayName": "dmwappushservice",
+      "category": "telemetry",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Desactiva push de aplicaciones de Windows Store."
+      ]
+    },
+    {
+      "name": "diagnosticshub.standardcollector.service",
+      "displayName": "DiagHub Standard Collector Service",
+      "category": "telemetry",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Detiene la recopilación de datos de diagnóstico."
+      ]
+    },
+    {
+      "name": "MapsBroker",
+      "displayName": "dmBroker Service",
+      "category": "maps",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Desactiva servicios de mapas en el sistema."
+      ]
+    },
+    {
+      "name": "WMPNetworkSvc",
+      "displayName": "Windows Media Player Network Sharing Service",
+      "category": "media",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Desactiva el compartir multimedia sobre red."
+      ]
+    },
+    {
+      "name": "RetailDemo",
+      "displayName": "Retail Demo Service",
+      "category": "consumer",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Detiene el modo de demostración comercial."
+      ]
+    },
+    {
+      "name": "WerSvc",
+      "displayName": "Windows Error Reporting",
+      "category": "telemetry",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Desactiva informes de errores a Microsoft."
+      ]
+    },
+    {
+      "name": "Fax",
+      "displayName": "Fax",
+      "category": "legacy",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Desactiva servicio de fax si no se usa."
+      ]
+    },
+    {
+      "name": "lfsvc",
+      "displayName": "Geolocation Service",
+      "category": "geolocation",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Detiene servicios de geolocalización."
+      ]
+    },
+    {
+      "name": "SCardSvr",
+      "displayName": "Smart Card",
+      "category": "hardware",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Desactiva soporte para tarjetas inteligentes."
+      ]
+    },
+    {
+      "name": "WbioSrvc",
+      "displayName": "Windows Biometric Service",
+      "category": "biometric",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Detiene servicios biométricos."
+      ]
+    },
+    {
+      "name": "TabletInputService",
+      "displayName": "Tablet PC Input Service",
+      "category": "input",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Desactiva soporte para dispositivos táctiles legacy."
+      ]
+    },
+    {
+      "name": "SharedAccess",
+      "displayName": "Internet Connection Sharing (ICS)",
+      "category": "network",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Detiene compartición de conexión de internet."
+      ]
+    },
+    {
+      "name": "RemoteRegistry",
+      "displayName": "Remote Registry",
+      "category": "security",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Desactiva acceso remoto al registro."
+      ]
+    },
+    {
+      "name": "SSDPSRV",
+      "displayName": "SSDP Discovery",
+      "category": "network",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Detiene descubrimiento de dispositivos UPnP."
+      ]
+    },
+    {
+      "name": "WSearch",
+      "displayName": "Windows Search",
+      "category": "search",
+      "recommendedAction": "manual",
+      "riskIfDisabled": "medium",
+      "consequences": [
+        "Afecta búsqueda en el Explorador si se desactiva."
+      ]
+    },
+    {
+      "name": "XblAuthManager",
+      "displayName": "Xbox Live Auth Manager",
+      "category": "xbox",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Desactiva autenticación de Xbox Live."
+      ]
+    },
+    {
+      "name": "XblGameSave",
+      "displayName": "Xbox Live Game Save",
+      "category": "xbox",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Detiene guardar datos de juegos en Xbox Live."
+      ]
+    },
+    {
+      "name": "XboxNetApiSvc",
+      "displayName": "Xbox Live Networking Service",
+      "category": "xbox",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Desactiva redes Xbox Live."
+      ]
+    },
+    {
+      "name": "XboxGipSvc",
+      "displayName": "Xbox Live Game Input Protocol",
+      "category": "xbox",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Detiene protocolo de entrada de juegos Xbox."
+      ]
+    },
+    {
+      "name": "Spooler",
+      "displayName": "Print Spooler",
+      "category": "print",
+      "recommendedAction": "manual",
+      "riskIfDisabled": "medium",
+      "consequences": [
+        "Desactiva impresión si se deshabilita."
+      ]
+    },
+    {
+      "name": "PrintNotify",
+      "displayName": "Printer Extensions and Notifications",
+      "category": "print",
+      "recommendedAction": "disable",
+      "riskIfDisabled": "low",
+      "consequences": [
+        "Desactiva notificaciones de impresoras."
+      ]
+    }
+  ]
+}

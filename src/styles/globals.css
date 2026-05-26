@@ -1,48 +1,277 @@
+/*
+ * ClearTool — sistema visual "Quirófano Cyan"
+ *
+ * Decisiones tomadas tras exploración de dominio (skill interface-design):
+ *   - depth strategy: borders-only (dense tool, no shadows dramáticos)
+ *   - elevation: shifts de lightness 1-2% (whisper-quiet)
+ *   - acento único: cyan #34D2E0 — todo lo demás es estructura
+ *   - tipografía: Geist Sans Variable (UI) + JetBrains Mono Variable (datos)
+ *
+ * No mezclar este sistema con clases globales antiguas (`.glass`, `.glass-hover`,
+ * `.bg-dashboard`) — todas redefinidas aquí abajo con la nueva semántica.
+ */
+
+/* Fuentes variables locales — sin CDN, funciona offline.  */
+@import "@fontsource-variable/geist/wght.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* ============================================================
+       SUPERFICIES — base carbón con shifts ~1-2% lightness.
+       En modo dark, "elevación" = ligeramente más claro.
+       ============================================================ */
+    --surface-canvas: 213 25% 5%;    /* #0A0D10 fondo de la app */
+    --surface-1: 215 23% 7%;         /* #0E1318 paneles base */
+    --surface-2: 215 22% 10%;        /* #131922 dropdowns, popovers */
+    --surface-3: 215 20% 13%;        /* #182030 menús anidados */
+    --surface-inset: 213 30% 3%;     /* #07090C inputs ("receptáculos") */
+
+    /* Texto en 4 niveles — relación AAA con surface-canvas.  */
+    --ink-primary: 210 25% 92%;       /* #E6EDF3 */
+    --ink-secondary: 213 11% 65%;     /* #9AA6B2 supporting */
+    --ink-tertiary: 215 9% 47%;       /* #6B7684 metadata */
+    --ink-muted: 215 11% 30%;         /* #3F4751 disabled/placeholder */
+
+    /* Borders — alpha sobre el canvas, no hex sólido (evita harshness).  */
+    --edge-subtle: 0 0% 100%;         /* usar con /4 → rgba(255,255,255,0.04) */
+    --edge-default: 0 0% 100%;        /* usar con /7 */
+    --edge-strong: 0 0% 100%;         /* usar con /14 */
+    --edge-focus: 188 70% 55%;        /* cyan focus ring */
+
+    /* Único acento + semánticos (intencionados, no decorativos).  */
+    --signal-cyan: 188 75% 54%;        /* #34D2E0 */
+    --signal-cyan-press: 188 73% 45%;  /* #1FB7C5 */
+    --signal-amber: 36 100% 65%;       /* #FFB94A */
+    --signal-red: 0 91% 71%;           /* #F87171 */
+    --signal-red-press: 0 73% 51%;     /* #DC2626 */
+    --signal-emerald: 142 71% 58%;     /* #4ADE80 — chips, no decoración */
+
+    /* ============================================================
+       Compatibilidad shadcn — mapeo a tokens semánticos.
+       Estos los consume Button/Card/etc. Mantienen API intacta.
+       ============================================================ */
+    --background: var(--surface-canvas);
+    --foreground: var(--ink-primary);
+    --card: var(--surface-1);
+    --card-foreground: var(--ink-primary);
+    --popover: var(--surface-2);
+    --popover-foreground: var(--ink-primary);
+    --primary: var(--signal-cyan);
+    --primary-foreground: var(--surface-canvas);
+    --secondary: var(--surface-2);
+    --secondary-foreground: var(--ink-primary);
+    --muted: var(--surface-2);
+    --muted-foreground: var(--ink-secondary);
+    --accent: var(--signal-cyan);
+    --accent-foreground: var(--surface-canvas);
+    --destructive: var(--signal-red);
+    --destructive-foreground: var(--surface-canvas);
+    --border: 215 18% 16%;             /* sólido para Tailwind `border-border` */
+    --input: var(--surface-inset);
+    --ring: var(--edge-focus);
     --radius: 0.5rem;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  *,
+  *::before,
+  *::after {
+    border-color: hsl(var(--border));
+    box-sizing: border-box;
   }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    overflow: hidden; /* el shell gestiona scroll por panel */
+  }
+
   body {
-    @apply bg-background text-foreground;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: hsl(var(--surface-canvas));
+    color: hsl(var(--ink-primary));
+    font-family:
+      "Geist Variable", ui-sans-serif, system-ui, "Segoe UI Variable",
+      "Segoe UI", sans-serif;
+    font-feature-settings:
+      "ss01", /* Geist: alternate single-storey 'a' */
+      "cv11"; /* slashed zero opcional */
+    font-variation-settings: "wght" 420;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
+
+  /* Números siempre tabular en datos — paths, tamaños, %.  */
+  .font-mono,
+  code,
+  pre,
+  kbd,
+  samp {
+    font-feature-settings: "tnum", "calt", "zero";
+  }
+
+  /* Scrollbar — fina, casi invisible, cyan al hover. */
   ::-webkit-scrollbar {
-    @apply w-2;
+    width: 10px;
+    height: 10px;
   }
   ::-webkit-scrollbar-track {
-    @apply bg-muted;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply rounded-full;
-    background: hsl(215 20.2% 65.1% / 0.3);
+    background-color: hsl(var(--ink-muted) / 0.35);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--signal-cyan) / 0.6);
+  }
+
+  /* Selección de texto: tinte cyan tenue. */
+  ::selection {
+    background-color: hsl(var(--signal-cyan) / 0.28);
+    color: hsl(var(--ink-primary));
+  }
+
+  /* Focus ring uniforme — visible siempre, jamás `outline:none`. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--edge-focus));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* ============================================================
+   Components — utilidades del sistema (no decoración suelta)
+   ============================================================ */
+@layer components {
+  /* Panel base — superficie 1 con borde subtle. Sustituye al viejo `.glass`. */
+  .panel {
+    background-color: hsl(var(--surface-1));
+    border: 1px solid hsl(var(--edge-default) / 0.06);
+    border-radius: 10px;
+  }
+
+  /* Panel elevado — para dropdowns/popovers. */
+  .panel-raised {
+    background-color: hsl(var(--surface-2));
+    border: 1px solid hsl(var(--edge-default) / 0.08);
+    border-radius: 10px;
+  }
+
+  /* Pillar (titlebar, chips persistentes) — más oscuro que canvas. */
+  .pillar {
+    background-color: hsl(var(--surface-inset));
+    border: 1px solid hsl(var(--edge-default) / 0.05);
+  }
+
+  /* Inset — para inputs y zonas que "reciben" contenido. */
+  .inset {
+    background-color: hsl(var(--surface-inset));
+    border: 1px solid hsl(var(--edge-subtle) / 0.05);
+    border-radius: 6px;
+  }
+
+  /* Tab — pill horizontal estilo Linear, underline cyan en activo. */
+  .tab {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full
+           text-xs font-medium tracking-tight
+           text-ink-secondary
+           transition-colors duration-120 ease-soft
+           hover:text-ink-primary;
+    -webkit-app-region: no-drag;
+  }
+  .tab[data-active="true"] {
+    background-color: hsl(var(--signal-cyan) / 0.08);
+    color: hsl(var(--signal-cyan));
+    box-shadow: inset 0 0 0 1px hsl(var(--signal-cyan) / 0.22);
+  }
+
+  /* Chip — para status (admin/limited/usuario). */
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md
+           text-2xs font-medium tracking-tight tabular-nums;
+    border: 1px solid hsl(var(--edge-default) / 0.06);
+    background-color: hsl(var(--surface-2));
+    color: hsl(var(--ink-secondary));
+  }
+  .chip[data-tone="cyan"] {
+    color: hsl(var(--signal-cyan));
+    border-color: hsl(var(--signal-cyan) / 0.25);
+    background-color: hsl(var(--signal-cyan) / 0.06);
+  }
+  .chip[data-tone="amber"] {
+    color: hsl(var(--signal-amber));
+    border-color: hsl(var(--signal-amber) / 0.28);
+    background-color: hsl(var(--signal-amber) / 0.06);
+  }
+  .chip[data-tone="red"] {
+    color: hsl(var(--signal-red));
+    border-color: hsl(var(--signal-red) / 0.28);
+    background-color: hsl(var(--signal-red) / 0.06);
+  }
+  .chip[data-tone="emerald"] {
+    color: hsl(var(--signal-emerald));
+    border-color: hsl(var(--signal-emerald) / 0.22);
+    background-color: hsl(var(--signal-emerald) / 0.06);
+  }
+
+  /* Drag region — para titlebar. data-tauri-drag-region en HTML maneja
+     el arrastre nativo; este helper es solo para excluir áreas. */
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+
+  /* Fondo de la app — solo el grano técnico, sin gradiente "marketing". */
+  .bg-grid-fine {
+    background-image:
+      linear-gradient(
+        hsl(var(--edge-subtle) / 0.025) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        hsl(var(--edge-subtle) / 0.025) 1px,
+        transparent 1px
+      );
+    background-size: 32px 32px;
+    background-position: -1px -1px;
+  }
+
+  /* ============================================================
+     LEGADO — alias para mantener viva la HomePage 3D existente
+     mientras se migra a tokens nuevos. Mismas clases, semántica
+     equivalente. Borrar tras migración completa de cada page.
+     ============================================================ */
+  .glass {
+    @apply panel;
+    padding: 1rem;
+  }
+  .glass-hover {
+    transition: border-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+                background-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .glass-hover:hover {
+    border-color: hsl(var(--signal-cyan) / 0.35);
+    background-color: hsl(var(--surface-2));
+  }
+  .bg-dashboard {
+    background-color: hsl(var(--surface-canvas));
+  }
+  .bg-grid-dots {
+    background-image: radial-gradient(
+      hsl(var(--edge-subtle) / 0.05) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
   }
 }

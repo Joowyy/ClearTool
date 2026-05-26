@@ -2,15 +2,19 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Envelope del JSON `bloatware-catalog.json`.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BloatwareCatalogFile {
     #[serde(default)]
-    pub version: String,
-    #[serde(default)]
-    pub updated_at: String,
+    pub schema_version: u32,
     pub entries: Vec<BloatwareEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BloatwareReverse {
+    pub kind: String,
+    pub store_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,37 +23,45 @@ pub struct BloatwareEntry {
     pub id: String,
     pub display_name: String,
     #[serde(default)]
-    pub category: Option<String>,
-    #[serde(default)]
-    pub removal_strategy: Option<String>,
-    #[serde(default)]
-    pub package_names: Vec<String>,
-    #[serde(default)]
-    pub services: Vec<String>,
-    #[serde(default)]
-    pub scheduled_tasks: Vec<String>,
-    #[serde(default)]
-    pub risk: Option<String>,
+    pub description: Option<String>,
+    pub category: String,
+    pub risk: String,
     #[serde(default)]
     pub consequences: Vec<String>,
+    pub removal_method: String,
     #[serde(default)]
-    pub reversal_method: Option<String>,
+    pub appx_package_family_name: Option<String>,
     #[serde(default)]
-    pub reversal_details: Option<String>,
+    pub appx_provisioned_name: Option<String>,
     #[serde(default)]
-    pub requires_elevation: bool,
+    pub winget_id: Option<String>,
+    #[serde(default)]
+    pub uninstall_registry_path: Option<String>,
+    #[serde(default = "default_preserves")]
+    pub preserves_data_by_default: bool,
+    #[serde(default)]
+    pub requires_admin: bool,
+    #[serde(default)]
+    pub reversible: bool,
+    #[serde(default)]
+    pub reverse_recipe: Option<BloatwareReverse>,
+    #[serde(default)]
+    pub min_windows_build: Option<u32>,
+    #[serde(default)]
+    pub presets: Vec<String>,
 }
+
+fn default_preserves() -> bool { true }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DetectedPackage {
-    pub entry_id: String,
+    pub id: String,
+    pub display_name: String,
     pub installed_for_user: bool,
-    pub installed_all_users: bool,
-    pub provisioned: bool,
-    pub package_full_name: Option<String>,
+    pub installed_provisioned: bool,
+    pub size_estimate_mb: Option<u32>,
     pub install_location: Option<String>,
-    pub size_estimate_bytes: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,31 +76,31 @@ pub struct RemoveBloatwareInput {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct StepLog {
-    pub kind: String,
-    pub target: String,
-    pub ok: bool,
-    pub stderr: Option<String>,
-    pub duration_ms: u64,
+pub struct RemoveReport {
+    pub run_id: String,
+    pub total: u32,
+    pub removed: u32,
+    pub failed: u32,
+    pub skipped: u32,
+    pub restore_point_seq: Option<u32>,
+    pub per_entry: Vec<PerEntryResult>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PerEntryResult {
-    pub entry_id: String,
+    pub id: String,
     pub status: String,
-    pub steps: Vec<StepLog>,
+    pub method_used: Option<String>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct RemoveReport {
+pub struct DebloatProgressEvent {
     pub run_id: String,
-    pub started_at: String,
-    pub finished_at: String,
-    pub restore_point_id: Option<u32>,
-    pub per_entry: Vec<PerEntryResult>,
-    pub total_removed: u64,
-    pub total_skipped: u64,
-    pub total_failed: u64,
+    pub processed: u32,
+    pub total: u32,
+    pub current_id: String,
+    pub current_display: String,
 }

@@ -67,6 +67,7 @@ export function ExplorerPage() {
         onScan={handleScan}
         onExpand={handleExpand}
         onCancel={handleCancel}
+        byPath={state.byPath}
       />
 
       {/* Barra de búsqueda local */}

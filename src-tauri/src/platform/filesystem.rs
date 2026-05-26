@@ -236,3 +236,167 @@ pub fn delete_recursive(root: &Path) -> (u64, u64, Vec<String>) {
     let result = delete_recursive_robust(root);
     (result.bytes_freed, result.files_deleted, result.errors)
 }
+
+/// Devuelve (bytes, files) aplicando un filtro `keep` a cada archivo.
+pub fn directory_stats_filtered<F>(
+    root: &Path,
+    _follow_reparse_points: bool,
+    mut keep: F,
+) -> AppResult<(u64, u64)>
+where
+    F: FnMut(&Path, &std::fs::Metadata) -> bool,
+{
+    if !root.exists() {
+        return Ok((0, 0));
+    }
+
+    let mut bytes: u64 = 0;
+    let mut files: u64 = 0;
+
+    let walker = WalkDir::new(root)
+        .follow_links(false)
+        .into_iter()
+        .filter_map(|e| e.ok());
+
+    for entry in walker {
+        let ft = entry.file_type();
+        if ft.is_file() {
+            if let Ok(meta) = entry.metadata() {
+                if keep(entry.path(), &meta) {
+                    files += 1;
+                    bytes = bytes.saturating_add(meta.len());
+                }
+            }
+        }
+    }
+    Ok((bytes, files))
+}
+
+/// Borrado recursivo con filtro. Respeta la misma lógica que delete_recursive_robust
+/// pero solo borra archivos que pasan el filtro `keep`.
+pub fn delete_recursive_filtered<F>(root: &Path, mut keep: F) -> DeleteResult
+where
+    F: FnMut(&Path, &std::fs::Metadata) -> bool,
+{
+    let mut result = DeleteResult {
+        bytes_freed: 0,
+        files_deleted: 0,
+        errors: Vec::new(),
+        pending_reboot: Vec::new(),
+    };
+
+    if !root.exists() {
+        result
+            .errors
+            .push(format!("{}: path does not exist", root.display()));
+        return result;
+    }
+
+    let mut all_entries: Vec<(std::path::PathBuf, bool)> = Vec::new();
+    collect_entries_filtered(root, &mut all_entries, &mut result, &mut keep);
+
+    for (entry_path, is_dir) in all_entries.into_iter().rev() {
+        if is_dir {
+            match std::fs::remove_dir(&entry_path) {
+                Ok(()) => {}
+                Err(e) => {
+                    if e.raw_os_error() == Some(145) || e.raw_os_error() == Some(32) {
+                        result
+                            .pending_reboot
+                            .push(entry_path.to_string_lossy().to_string());
+                    }
+                }
+            }
+        } else {
+            match std::fs::remove_file(&entry_path) {
+                Ok(()) => {
+                    if let Ok(meta) = entry_path.metadata() {
+                        result.bytes_freed = result.bytes_freed.saturating_add(meta.len());
+                    }
+                    result.files_deleted += 1;
+                }
+                Err(e) => {
+                    if e.raw_os_error() == Some(32) {
+                        #[cfg(windows)]
+                        {
+                            mark_for_reboot_deletion(&entry_path, &mut result);
+                        }
+                        #[cfg(not(windows))]
+                        {
+                            result
+                                .pending_reboot
+                                .push(entry_path.to_string_lossy().to_string());
+                        }
+                    } else {
+                        result
+                            .errors
+                            .push(format!("{}: {}", entry_path.display(), e));
+                    }
+                }
+            }
+        }
+    }
+
+    if root.is_dir() {
+        if let Err(e) = std::fs::remove_dir(root) {
+            if e.raw_os_error() != Some(145) {
+                result
+                    .errors
+                    .push(format!("root {}: {}", root.display(), e));
+            }
+        }
+    } else {
+        if let Err(e) = std::fs::remove_file(root) {
+            result
+                .errors
+                .push(format!("root {}: {}", root.display(), e));
+        }
+    }
+
+    result
+}
+
+fn collect_entries_filtered<F>(
+    root: &Path,
+    entries: &mut Vec<(std::path::PathBuf, bool)>,
+    result: &mut DeleteResult,
+    keep: &mut F,
+) where
+    F: FnMut(&Path, &std::fs::Metadata) -> bool,
+{
+    let rd = match std::fs::read_dir(root) {
+        Ok(rd) => rd,
+        Err(e) => {
+            result.errors.push(format!("{}: {}", root.display(), e));
+            return;
+        }
+    };
+
+    for entry in rd {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(e) => {
+                result.errors.push(format!("{}: {}", root.display(), e));
+                continue;
+            }
+        };
+
+        let path = entry.path();
+        let ft = match entry.file_type() {
+            Ok(ft) => ft,
+            Err(e) => {
+                result.errors.push(format!("{}: {}", path.display(), e));
+                continue;
+            }
+        };
+
+        if ft.is_dir() {
+            collect_entries_filtered(&path, entries, result, keep);
+            entries.push((path, true));
+        } else if let Ok(meta) = entry.metadata() {
+            if keep(&path, &meta) {
+                entries.push((path, false));
+            }
+        }
+    }
+}

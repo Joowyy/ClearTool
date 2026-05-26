@@ -6,5 +6,7 @@ export const ROUTES = {
   SERVICES: "/services",
   REGISTRY: "/registry",
   RESTORE: "/restore",
+  AUDIT: "/audit",
   SETTINGS: "/settings",
+  PROCESSES: "/processes",
 } as const;

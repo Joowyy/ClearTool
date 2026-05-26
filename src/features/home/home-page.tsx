@@ -1,134 +1,174 @@
-import { useSystemSummary } from "../../hooks/use-system-summary";
-import { useAppStore } from "../../lib/store";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { formatBytes } from "../../lib/utils";
-import { HardDrive, Cpu, User, Shield, ShieldOff } from "lucide-react";
+import { lazy, Suspense, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { HardDrive, Trash2, Package, Settings2, RotateCcw } from "lucide-react";
+import { useSystemSummary } from "../../hooks/use-system-summary";
+import { useTelemetry } from "../../hooks/use-telemetry";
 import { ROUTES } from "../../lib/routes";
+import { TiltCard } from "./components/tilt-card";
+import { CpuLineChart } from "./components/cpu-line-chart";
+import { RamRing } from "./components/ram-ring";
+import { TopProcessesTable } from "./components/top-processes-table";
+import { GpuCard } from "./components/gpu-card";
+import { DiskTube } from "./components/disk-tube";
+import { AmbientParticles } from "./components/ambient-particles";
+
+// Lazy-load del Canvas del hero — son ~450KB de three.js, sólo se cargan
+// al entrar al Dashboard.
+const DashboardHero3D = lazy(() =>
+  import("./components/dashboard-hero-3d").then((m) => ({ default: m.DashboardHero3D })),
+);
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.07 } },
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 24, scale: 0.98 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const },
+  },
+};
 
 export function HomePage() {
-  const { data: summary, isLoading, error } = useSystemSummary();
-  const isElevated = useAppStore((s) => s.isElevated);
+  const { data: summary } = useSystemSummary();
+  const { data: telemetry, cpuHistory } = useTelemetry();
 
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <div className="h-8 bg-muted rounded animate-pulse w-48" />
-        <div className="grid grid-cols-2 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-32 bg-muted rounded-lg animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <p className="text-destructive-foreground bg-destructive/20 p-3 rounded-md text-sm">
-          Error al cargar información del sistema
-        </p>
-      </div>
-    );
-  }
+  // Carga global: media ponderada de CPU + RAM (cada uno cuenta 50%).
+  const loadGlobal = useMemo(() => {
+    const cpu = telemetry?.cpuTotalPercent ?? 0;
+    const ramPct = telemetry?.ramTotalBytes
+      ? (telemetry.ramUsedBytes / telemetry.ramTotalBytes) * 100
+      : 0;
+    return (cpu + ramPct) / 2;
+  }, [telemetry]);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Panel de control</h2>
-          <p className="text-muted-foreground text-sm">
-            {summary?.os_name} — Build {summary?.build_number}
-          </p>
-        </div>
-        <Badge variant={isElevated ? "success" : "warning"}>
-          {isElevated ? (
-            <>
-              <Shield className="h-3 w-3 mr-1" /> Administrador
-            </>
-          ) : (
-            <>
-              <ShieldOff className="h-3 w-3 mr-1" /> Modo limitado
-            </>
-          )}
-        </Badge>
-      </div>
+    <div className="relative min-h-full bg-grid-fine">
+      {/* Background sutil — solo en home, no compite con datos. */}
+      <AmbientParticles />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <User className="h-4 w-4" /> Usuario
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{summary?.username}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Cpu className="h-4 w-4" /> RAM instalada
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {formatBytes(summary?.total_ram_bytes ?? 0)}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="relative z-10 p-6 space-y-6"
+      >
+        <motion.div variants={itemVariants}>
+          <div className="flex items-end justify-between flex-wrap gap-2">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-tight text-ink-primary">
+                Panel de control
+              </h2>
+              <p className="text-xs text-ink-tertiary font-mono mt-1">
+                {summary?.osName ?? "Windows"} · build {summary?.buildNumber ?? "—"}
+              </p>
+            </div>
+            <p className="text-2xs text-ink-tertiary tabular-nums font-mono">
+              telemetría · refresh 1.5 s
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </motion.div>
 
-        {summary?.drives.map((drive) => (
-          <Card key={drive.letter}>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <HardDrive className="h-4 w-4" /> Disco {drive.letter}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Libre</span>
-                <span className="font-medium">{formatBytes(drive.free_bytes)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total</span>
-                <span className="font-medium">{formatBytes(drive.total_bytes)}</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div
-                  className="bg-primary h-2 rounded-full"
-                  style={{
-                    width: `${Math.min(100, ((drive.total_bytes - drive.free_bytes) / drive.total_bytes) * 100)}%`,
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div>
-        <h3 className="text-lg font-semibold mb-3">Acciones rápidas</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { to: ROUTES.CACHE, label: "Limpiar caché", color: "text-blue-400" },
-            { to: ROUTES.DEBLOAT, label: "Eliminar bloatware", color: "text-red-400" },
-            { to: ROUTES.SERVICES, label: "Gestionar servicios", color: "text-yellow-400" },
-            { to: ROUTES.RESTORE, label: "Puntos de restauración", color: "text-green-400" },
-          ].map(({ to, label, color }) => (
-            <Link
-              key={to}
-              to={to}
-              className="p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors text-sm font-medium"
+      {/* Hero 3D + top procesos */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+        <motion.div variants={itemVariants}>
+          <TiltCard className="min-h-[260px] flex items-center justify-center">
+            <Suspense
+              fallback={
+                <div className="h-[260px] flex items-center justify-center text-muted-foreground text-sm">
+                  Cargando vista 3D…
+                </div>
+              }
             >
-              <span className={color}>{label}</span>
-            </Link>
-          ))}
-        </div>
+              <DashboardHero3D loadPercent={loadGlobal} />
+            </Suspense>
+          </TiltCard>
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <TiltCard className="h-full">
+            <TopProcessesTable processes={telemetry?.topProcesses ?? []} />
+          </TiltCard>
+        </motion.div>
       </div>
+
+      {/* CPU + RAM + Discos */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <motion.div variants={itemVariants}>
+          <TiltCard className="h-full min-h-[220px]">
+            <CpuLineChart
+              history={cpuHistory}
+              totalPercent={telemetry?.cpuTotalPercent ?? 0}
+            />
+          </TiltCard>
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <TiltCard className="h-full min-h-[220px]">
+            <RamRing
+              usedBytes={telemetry?.ramUsedBytes ?? 0}
+              totalBytes={telemetry?.ramTotalBytes ?? 0}
+            />
+          </TiltCard>
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <TiltCard className="h-full min-h-[220px]">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+              <HardDrive className="h-4 w-4" />
+              Discos
+            </div>
+            <div className="space-y-3">
+              {(summary?.drives ?? []).map((d) => (
+                <DiskTube key={d.letter} drive={d} />
+              ))}
+              {(summary?.drives ?? []).length === 0 && (
+                <p className="text-xs text-muted-foreground">Sin discos detectados</p>
+              )}
+            </div>
+          </TiltCard>
+        </motion.div>
+      </div>
+
+      {/* GPUs */}
+      {(telemetry?.gpus ?? []).length > 0 && (
+        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {telemetry!.gpus.map((g) => (
+            <TiltCard key={g.index}>
+              <GpuCard gpu={g} />
+            </TiltCard>
+          ))}
+        </motion.div>
+      )}
+
+        {/* Acciones rápidas */}
+        <motion.div variants={itemVariants}>
+          <h3 className="text-sm font-medium tracking-tight text-ink-secondary mb-3 uppercase">
+            Acciones rápidas
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { to: ROUTES.CACHE, label: "Limpiar caché", icon: Trash2 },
+              { to: ROUTES.DEBLOAT, label: "Eliminar bloatware", icon: Package },
+              { to: ROUTES.SERVICES, label: "Gestionar servicios", icon: Settings2 },
+              { to: ROUTES.RESTORE, label: "Puntos de restauración", icon: RotateCcw },
+            ].map(({ to, label, icon: Icon }) => (
+              <Link
+                key={to}
+                to={to}
+                className="panel p-4 flex items-center gap-3 text-sm font-medium
+                           text-ink-secondary hover:text-ink-primary
+                           hover:border-signal-cyan/35 hover:bg-surface-2
+                           transition-colors duration-160 ease-soft"
+              >
+                <Icon className="h-4 w-4 text-signal-cyan" strokeWidth={1.75} />
+                <span>{label}</span>
+              </Link>
+            ))}
+          </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

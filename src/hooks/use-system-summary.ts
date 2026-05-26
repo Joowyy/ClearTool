@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { systemSummary } from "../lib/tauri";
+import { systemSummary } from "../api";
 
 export function useSystemSummary() {
   return useQuery({

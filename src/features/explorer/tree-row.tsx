@@ -1,4 +1,4 @@
-// Fila individual del árbol del explorador.
+// Fila individual del árbol del explorador — renderiza recursivamente.
 import { useState, useCallback } from "react";
 import {
   ChevronRight,
@@ -12,12 +12,13 @@ import {
 } from "lucide-react";
 import { formatBytes } from "../../lib/utils";
 import type { TreeNode } from "../../api";
+import type { NodeState } from "./use-explorer-tree";
 
 interface TreeRowProps {
   node: TreeNode;
   depth: number;
   onExpand: (path: string) => void;
-  children?: React.ReactNode;
+  byPath: Map<string, NodeState>;
 }
 
 function fileIcon(name: string) {
@@ -39,27 +40,29 @@ function sizeColor(bytes: number): string {
   return "text-red-400";
 }
 
-export function TreeRow({ node, depth, onExpand, children }: TreeRowProps) {
+export function TreeRow({ node, depth, onExpand, byPath }: TreeRowProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const handleExpand = useCallback(() => {
-    if (node.kind === "Dir") {
-      if (!expanded) {
-        onExpand(node.path);
-      }
-      setExpanded((prev) => !prev);
-    }
+  const handleClick = useCallback(() => {
+    if (node.kind !== "Dir") return;
+    if (!expanded) onExpand(node.path);
+    setExpanded((v) => !v);
   }, [node.kind, node.path, expanded, onExpand]);
 
   const isDir = node.kind === "Dir";
   const Icon = isDir ? (expanded ? FolderOpen : Folder) : fileIcon(node.name);
   const sizeClass = sizeColor(node.sizeBytes);
 
+  const nodeState = byPath.get(node.path);
+  const childNodes = nodeState?.children;
+  const isLoading = childNodes === "loading";
+  const hasError = childNodes === "error";
+
   return (
     <>
       <tr
         className="border-b border-border/30 hover:bg-accent/20 cursor-pointer group"
-        onClick={handleExpand}
+        onClick={handleClick}
       >
         <td className="p-2 pl-4 w-8">
           {isDir ? (
@@ -74,10 +77,6 @@ export function TreeRow({ node, depth, onExpand, children }: TreeRowProps) {
         </td>
         <td className="p-2">
           <div className="flex items-center gap-2" style={{ paddingLeft: depth * 20 }}>
-            <div
-              className="absolute left-0 top-0 bottom-0 w-px bg-border/30"
-              style={{ left: `${depth * 20 + 12}px` }}
-            />
             <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
             <span
               className="font-medium truncate max-w-md group-hover:text-foreground"
@@ -102,7 +101,36 @@ export function TreeRow({ node, depth, onExpand, children }: TreeRowProps) {
           )}
         </td>
       </tr>
-      {expanded && isDir && children}
+
+      {expanded && isDir && isLoading && (
+        <tr>
+          <td colSpan={4} className="p-2 text-xs text-muted-foreground animate-pulse"
+            style={{ paddingLeft: (depth + 1) * 20 + 16 }}>
+            Cargando...
+          </td>
+        </tr>
+      )}
+
+      {expanded && isDir && hasError && (
+        <tr>
+          <td colSpan={4} className="p-2 text-xs text-red-400"
+            style={{ paddingLeft: (depth + 1) * 20 + 16 }}>
+            Error al leer directorio
+          </td>
+        </tr>
+      )}
+
+      {expanded && isDir && Array.isArray(childNodes) &&
+        childNodes.map((child) => (
+          <TreeRow
+            key={child.path}
+            node={child}
+            depth={depth + 1}
+            onExpand={onExpand}
+            byPath={byPath}
+          />
+        ))
+      }
     </>
   );
 }
