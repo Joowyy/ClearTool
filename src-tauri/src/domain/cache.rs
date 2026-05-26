@@ -3,8 +3,12 @@
 use crate::core::AppResult;
 use crate::domain::{audit, catalog};
 use crate::models::cache::{
-    CacheFilters, CacheLocation, CacheScanReport, CleanCacheInput, CleanReport, PerLocationResult,
+    BlockedAction, BlockedLocation, CacheFilters, CacheLocation, CacheScanReport, CleanCacheInput,
+    CleanPlan, CleanReport, CleanReportV2, CleanStrategy, ExecutePlanOpts, LocationResult,
+    LocationStatus, PermissionLocation, PerLocationResult, ReadyLocation, SkipReason,
+    SkippedLocation, VerifyLocationResult, VerifyReport,
 };
+use crate::models::process::LockingProcess;
 use crate::models::restore::ReverseRecipe;
 use crate::platform::filesystem;
 use chrono::Utc;
@@ -317,3 +321,608 @@ pub fn expand_path(template: &str) -> String {
     }
     out
 }
+
+// ── v2: analyze_locations, execute_plan, verify_after_clean ──
+
+/// Denylist: IDs y paths que NUNCA se tocan.
+const FORBIDDEN_IDS: &[&str] = &[];
+const FORBIDDEN_PATTERNS: &[&str] = &[
+    "microsoft.windowsterminal",
+    "microsoft.windowsstore",
+    "microsoft.desktopappinstaller",
+    "microsoft.windowsdefender",
+    "microsoft.sechealthui",
+    "\\appx\\",
+];
+
+pub fn is_disallowed(id: &str, path: &str) -> bool {
+    if FORBIDDEN_IDS.contains(&id) {
+        return true;
+    }
+    let path_lower = path.to_lowercase();
+    FORBIDDEN_PATTERNS
+        .iter()
+        .any(|p| path_lower.contains(p))
+}
+
+/// Analiza las ubicaciones del catálogo y devuelve un CleanPlan clasificado.
+pub fn analyze_locations(ids: &[String]) -> AppResult<CleanPlan> {
+    let catalog_items = catalog::load_cache_locations()?;
+    let plan_id = Uuid::new_v4().to_string();
+    let generated_at = Utc::now().to_rfc3339();
+
+    let mut ready = Vec::new();
+    let mut blocked = Vec::new();
+    let mut permission_issues = Vec::new();
+    let mut skipped = Vec::new();
+
+    for id in ids {
+        let entry = match catalog_items.iter().find(|e| &e.id == id) {
+            Some(e) => e,
+            None => {
+                skipped.push(SkippedLocation {
+                    id: id.clone(),
+                    display_name: id.clone(),
+                    reason: SkipReason::DisallowedByAllowlist,
+                });
+                continue;
+            }
+        };
+
+        if is_disallowed(&entry.id, &entry.path) {
+            skipped.push(SkippedLocation {
+                id: entry.id.clone(),
+                display_name: entry.display_name.clone(),
+                reason: SkipReason::DisallowedByAllowlist,
+            });
+            continue;
+        }
+
+        let resolved = match resolve_env_vars(&entry.path) {
+            Ok(r) => r,
+            Err(_) => {
+                skipped.push(SkippedLocation {
+                    id: entry.id.clone(),
+                    display_name: entry.display_name.clone(),
+                    reason: SkipReason::DoesNotExist,
+                });
+                continue;
+            }
+        };
+        let path = Path::new(&resolved);
+
+        if !path.exists() {
+            skipped.push(SkippedLocation {
+                id: entry.id.clone(),
+                display_name: entry.display_name.clone(),
+                reason: SkipReason::DoesNotExist,
+            });
+            continue;
+        }
+
+        let (bytes, file_count, oldest) = match scan_path_stats(path) {
+            Ok(s) => s,
+            Err(e) => {
+                if matches!(e, crate::core::AppError::Permission(_)) {
+                    permission_issues.push(PermissionLocation {
+                        id: entry.id.clone(),
+                        display_name: entry.display_name.clone(),
+                        resolved_path: resolved,
+                        bytes: 0,
+                        reason: format!("{}", e),
+                    });
+                    continue;
+                }
+                skipped.push(SkippedLocation {
+                    id: entry.id.clone(),
+                    display_name: entry.display_name.clone(),
+                    reason: SkipReason::DoesNotExist,
+                });
+                continue;
+            }
+        };
+
+        if bytes == 0 {
+            skipped.push(SkippedLocation {
+                id: entry.id.clone(),
+                display_name: entry.display_name.clone(),
+                reason: SkipReason::Empty,
+            });
+            continue;
+        }
+
+        let lockers = crate::platform::processes::who_locks_path(path).unwrap_or_default();
+
+        if !lockers.is_empty() {
+            let suggested_action = suggest_action(&lockers, &entry.category);
+            blocked.push(BlockedLocation {
+                id: entry.id.clone(),
+                display_name: entry.display_name.clone(),
+                resolved_path: resolved,
+                bytes,
+                locked_by: lockers,
+                suggested_action,
+            });
+        } else {
+            ready.push(ReadyLocation {
+                id: entry.id.clone(),
+                display_name: entry.display_name.clone(),
+                resolved_path: resolved,
+                bytes,
+                file_count,
+                strategy: parse_strategy(&entry.category, &entry.path),
+                age_oldest_file: oldest,
+            });
+        }
+    }
+
+    let total_estimated = ready.iter().map(|r| r.bytes).sum();
+    let total_blocked = blocked.iter().map(|b| b.bytes).sum();
+
+    Ok(CleanPlan {
+        plan_id,
+        generated_at,
+        ready,
+        blocked,
+        permission_issues,
+        skipped,
+        total_estimated_bytes: total_estimated,
+        total_blocked_bytes: total_blocked,
+    })
+}
+
+fn resolve_env_vars(path: &str) -> Result<String, std::env::VarError> {
+    let mut out = String::new();
+    let mut chars = path.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '%' {
+            let mut var = String::new();
+            while let Some(&next) = chars.peek() {
+                if next == '%' {
+                    chars.next();
+                    break;
+                }
+                var.push(next);
+                chars.next();
+            }
+            out.push_str(&std::env::var(&var)?);
+        } else {
+            out.push(c);
+        }
+    }
+    Ok(out)
+}
+
+fn scan_path_stats(path: &Path) -> AppResult<(u64, u32, Option<String>)> {
+    let mut total_bytes: u64 = 0;
+    let mut file_count: u32 = 0;
+    let mut oldest: Option<SystemTime> = None;
+
+    fn walk(
+        p: &Path,
+        bytes: &mut u64,
+        count: &mut u32,
+        oldest: &mut Option<SystemTime>,
+    ) -> AppResult<()> {
+        let entries = std::fs::read_dir(p).map_err(|e| {
+            if e.kind() == std::io::ErrorKind::PermissionDenied {
+                crate::core::AppError::Permission(format!("{}: {}", p.display(), e))
+            } else {
+                crate::core::AppError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("{}: {}", p.display(), e),
+                ))
+            }
+        })?;
+        for entry_r in entries {
+            let entry = match entry_r {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+            let md = match entry.metadata() {
+                Ok(m) => m,
+                Err(_) => continue,
+            };
+            if md.is_dir() {
+                let _ = walk(&entry.path(), bytes, count, oldest);
+            } else {
+                *bytes += md.len();
+                *count += 1;
+                if let Ok(modified) = md.modified() {
+                    match *oldest {
+                        Some(o) if modified < o => *oldest = Some(modified),
+                        None => *oldest = Some(modified),
+                        _ => {}
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    walk(path, &mut total_bytes, &mut file_count, &mut oldest)?;
+    let oldest_str = oldest.map(|t| chrono::DateTime::<Utc>::from(t).to_rfc3339());
+    Ok((total_bytes, file_count, oldest_str))
+}
+
+fn suggest_action(lockers: &[LockingProcess], _category: &str) -> BlockedAction {
+    if let Some(main) = lockers.first() {
+        return BlockedAction::CloseProcess {
+            pid: main.pid,
+            process_name: main.name.clone(),
+        };
+    }
+    BlockedAction::SkipOnly {
+        reason: "Bloqueado por proceso del sistema sin UI".into(),
+    }
+}
+
+fn parse_strategy(category: &str, path: &str) -> CleanStrategy {
+    let cat_lower = category.to_lowercase();
+    let path_lower = path.to_lowercase();
+
+    if cat_lower.contains("uwp") || path_lower.contains("\\packages\\") {
+        if let Some(pfn) = extract_package_family(&path_lower) {
+            return CleanStrategy::UwpAppAware {
+                package_family_name: pfn,
+            };
+        }
+    }
+    if cat_lower.contains("browser")
+        || path_lower.contains("chrome")
+        || path_lower.contains("firefox")
+        || path_lower.contains("edge")
+    {
+        return CleanStrategy::BrowserAware;
+    }
+    if cat_lower.contains("windows-update") || cat_lower.contains("dism") {
+        return CleanStrategy::SystemRestartRequired;
+    }
+    if path_lower.contains("winsxs") || path_lower.contains("component") {
+        return CleanStrategy::TakeOwnershipAndDelete;
+    }
+    CleanStrategy::DirectDelete
+}
+
+fn extract_package_family(path: &str) -> Option<String> {
+    let parts: Vec<&str> = path.split("\\packages\\").collect();
+    if parts.len() < 2 {
+        return None;
+    }
+    let after = parts[1];
+    if let Some(end) = after.find('\\') {
+        Some(after[..end].to_string())
+    } else {
+        Some(after.to_string())
+    }
+}
+
+/// Ejecuta un CleanPlan con retry y estrategias.
+pub async fn execute_plan<F>(
+    plan: CleanPlan,
+    opts: ExecutePlanOpts,
+    mut emit_progress: F,
+) -> AppResult<CleanReportV2>
+where
+    F: FnMut(&str, &str, &str, u64, u64) + Send + Sync,
+{
+
+    let started_at = Utc::now().to_rfc3339();
+    let run_id = Uuid::new_v4().to_string();
+
+    let restore_point_seq = if !opts.dry_run && opts.create_restore_point {
+        let desc = format!(
+            "ClearTool — caché ({} ubicaciones)",
+            plan.ready.len()
+        );
+        crate::platform::restore_point::create(&desc, 12, true).ok()
+    } else {
+        None
+    };
+
+    let mut closed_pids: Vec<u32> = Vec::new();
+    if opts.auto_close_blocking {
+        for blocked in &plan.blocked {
+            if let BlockedAction::CloseProcess { pid, .. } = &blocked.suggested_action {
+                emit_progress(
+                    "info",
+                    &blocked.display_name,
+                    &format!("Cerrando proceso PID {}", pid),
+                    0,
+                    0,
+                );
+                let ok = crate::platform::processes::close_gracefully(*pid, 5000).await;
+                if ok.unwrap_or(false) {
+                    closed_pids.push(*pid);
+                }
+            }
+        }
+    }
+
+    let mut per_location: Vec<LocationResult> = Vec::new();
+    let mut total_bytes_freed: u64 = 0;
+    let mut total_bytes_scheduled: u64 = 0;
+    let mut total_bytes_failed: u64 = 0;
+
+    for ready_loc in &plan.ready {
+        emit_progress(
+            "info",
+            &ready_loc.display_name,
+            &format!("Limpiando: {}", ready_loc.resolved_path),
+            0,
+            0,
+        );
+
+        let result = if opts.dry_run {
+            LocationResult {
+                id: ready_loc.id.clone(),
+                status: LocationStatus::Cleaned,
+                bytes_freed: ready_loc.bytes,
+                bytes_scheduled: 0,
+                files_deleted: ready_loc.file_count,
+                files_scheduled: 0,
+                files_failed: 0,
+                error: None,
+                duration_ms: 0,
+            }
+        } else {
+            execute_one_location(ready_loc, &opts, &mut emit_progress).await
+        };
+
+        total_bytes_freed += result.bytes_freed;
+        total_bytes_scheduled += result.bytes_scheduled;
+        if matches!(result.status, LocationStatus::Failed) {
+            total_bytes_failed += ready_loc.bytes;
+        }
+
+        per_location.push(result);
+    }
+
+    if opts.schedule_blocked_for_reboot && !opts.dry_run {
+        for blocked in &plan.blocked {
+            if matches!(
+                &blocked.suggested_action,
+                BlockedAction::ScheduleReboot | BlockedAction::SkipOnly { .. }
+            ) {
+                let path = Path::new(&blocked.resolved_path);
+                let _ = walk_and_schedule(path);
+            }
+        }
+    }
+
+    Ok(CleanReportV2 {
+        plan_id: plan.plan_id,
+        run_id,
+        started_at,
+        finished_at: Utc::now().to_rfc3339(),
+        restore_point_seq,
+        per_location,
+        total_bytes_freed,
+        total_bytes_scheduled_reboot: total_bytes_scheduled,
+        total_bytes_failed,
+        closed_processes: closed_pids,
+    })
+}
+
+async fn execute_one_location<F>(
+    loc: &ReadyLocation,
+    _opts: &ExecutePlanOpts,
+    emit: &mut F,
+) -> LocationResult
+where
+    F: FnMut(&str, &str, &str, u64, u64) + Send + Sync,
+{
+    let start = std::time::Instant::now();
+    let path = std::path::Path::new(&loc.resolved_path);
+
+    let mut bytes_freed: u64 = 0;
+    let mut bytes_scheduled: u64 = 0;
+    let mut files_deleted: u32 = 0;
+    let mut files_scheduled: u32 = 0;
+    let mut files_failed: u32 = 0;
+    let mut error_msg: Option<String> = None;
+
+    if let Err(e) = walk_and_delete(
+        path,
+        &mut bytes_freed,
+        &mut bytes_scheduled,
+        &mut files_deleted,
+        &mut files_scheduled,
+        &mut files_failed,
+        true,
+    )
+    .await
+    {
+        error_msg = Some(format!("{}", e));
+        emit("error", &loc.display_name, &format!("{}", e), 0, 0);
+    }
+
+    let status = if files_failed == 0 && files_scheduled == 0 {
+        LocationStatus::Cleaned
+    } else if files_scheduled > 0 && files_failed == 0 {
+        LocationStatus::PartialReboot
+    } else {
+        LocationStatus::Failed
+    };
+
+    LocationResult {
+        id: loc.id.clone(),
+        status,
+        bytes_freed,
+        bytes_scheduled,
+        files_deleted,
+        files_scheduled,
+        files_failed,
+        error: error_msg,
+        duration_ms: start.elapsed().as_millis() as u64,
+    }
+}
+
+async fn walk_and_delete(
+    path: &std::path::Path,
+    bytes_freed: &mut u64,
+    bytes_scheduled: &mut u64,
+    files_deleted: &mut u32,
+    files_scheduled: &mut u32,
+    files_failed: &mut u32,
+    schedule_on_fail: bool,
+) -> AppResult<()> {
+    let entries: Vec<_> = match std::fs::read_dir(path) {
+        Ok(it) => it.filter_map(|r| r.ok()).collect(),
+        Err(e) => {
+            return Err(crate::core::AppError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("read_dir {}: {}", path.display(), e),
+            )))
+        }
+    };
+
+    for entry in entries {
+        let entry_path = entry.path();
+        let md = match entry.metadata() {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+        let size = md.len();
+
+        if md.is_dir() {
+            Box::pin(walk_and_delete(
+                &entry_path,
+                bytes_freed,
+                bytes_scheduled,
+                files_deleted,
+                files_scheduled,
+                files_failed,
+                schedule_on_fail,
+            ))
+            .await?;
+            let _ = std::fs::remove_dir(&entry_path);
+        } else {
+            match delete_with_retry(&entry_path).await {
+                Ok(_) => {
+                    *bytes_freed += size;
+                    *files_deleted += 1;
+                }
+                Err(_) if schedule_on_fail => {
+                    match crate::platform::pending_rename::schedule_delete_on_reboot(&entry_path) {
+                        Ok(_) => {
+                            *bytes_scheduled += size;
+                            *files_scheduled += 1;
+                        }
+                        Err(_) => *files_failed += 1,
+                    }
+                }
+                Err(_) => *files_failed += 1,
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn delete_with_retry(path: &std::path::Path) -> AppResult<()> {
+    use std::time::Duration;
+    let mut delay_ms = 100u64;
+    for attempt in 0..3 {
+        match std::fs::remove_file(path) {
+            Ok(_) => return Ok(()),
+            Err(e) => {
+                if attempt < 2
+                    && (e.kind() == std::io::ErrorKind::PermissionDenied
+                        || e.raw_os_error() == Some(32))
+                {
+                    tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+                    delay_ms *= 2;
+                    continue;
+                }
+                return Err(crate::core::AppError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("{}: {}", path.display(), e),
+                )));
+            }
+        }
+    }
+    unreachable!()
+}
+
+fn walk_and_schedule(path: &std::path::Path) -> AppResult<()> {
+    let entries = match std::fs::read_dir(path) {
+        Ok(it) => it.filter_map(|r| r.ok()).collect::<Vec<_>>(),
+        Err(_) => return Ok(()),
+    };
+    for entry in entries {
+        let entry_path = entry.path();
+        if entry_path.is_dir() {
+            walk_and_schedule(&entry_path)?;
+        } else {
+            let _ = crate::platform::pending_rename::schedule_delete_on_reboot(&entry_path);
+        }
+    }
+    Ok(())
+}
+
+/// Verifica el resultado real tras la limpieza.
+pub fn verify_after_clean(
+    plan: &CleanPlan,
+    _report: &CleanReportV2,
+) -> AppResult<VerifyReport> {
+    let mut per_location = Vec::new();
+    let mut total_actually_freed = 0u64;
+    let mut total_still_present = 0u64;
+
+    let pendings = crate::platform::pending_rename::list_pending_renames().unwrap_or_default();
+
+    for ready in &plan.ready {
+        let path = std::path::Path::new(&ready.resolved_path);
+        let bytes_after = if path.exists() {
+            scan_path_stats(path).map(|(b, _, _)| b).unwrap_or(0)
+        } else {
+            0
+        };
+
+        let bytes_before = ready.bytes;
+        let bytes_actually_freed = bytes_before.saturating_sub(bytes_after);
+
+        let files_pending = pendings
+            .iter()
+            .filter(|p| {
+                p.is_delete && path_under(&p.source, &ready.resolved_path)
+            })
+            .count() as u32;
+
+        let success_percent = if bytes_before == 0 {
+            100.0
+        } else {
+            (bytes_actually_freed as f32 / bytes_before as f32) * 100.0
+        };
+
+        total_actually_freed += bytes_actually_freed;
+        total_still_present += bytes_after;
+
+        per_location.push(VerifyLocationResult {
+            id: ready.id.clone(),
+            display_name: ready.display_name.clone(),
+            bytes_before,
+            bytes_after,
+            bytes_actually_freed,
+            files_pending_reboot: files_pending,
+            success_percent,
+        });
+    }
+
+    Ok(VerifyReport {
+        plan_id: plan.plan_id.clone(),
+        verified_at: chrono::Utc::now().to_rfc3339(),
+        per_location,
+        total_actually_freed,
+        total_still_present,
+    })
+}
+
+fn path_under(child: &str, parent: &str) -> bool {
+    let c = child.to_lowercase().replace('/', "\\");
+    let p = parent.to_lowercase().replace('/', "\\");
+    c.starts_with(&p)
+}
+
+// ── VerifyReport (añadido a models/cache.rs) ──
+// Se define aquí temporalmente hasta que se mueva al modelo.

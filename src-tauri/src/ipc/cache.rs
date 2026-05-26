@@ -2,7 +2,10 @@
 
 use crate::core::AppResult;
 use crate::domain;
-use crate::models::cache::{CacheLocation, CacheScanReport, CleanCacheInput, CleanReport};
+use crate::models::cache::{
+    CacheLocation, CacheScanReport, CleanCacheInput, CleanPlan, CleanReport, CleanReportV2,
+    ExecutePlanOpts, VerifyReport,
+};
 use serde::Serialize;
 use tauri::Emitter;
 
@@ -41,4 +44,37 @@ pub async fn clean_cache_locations(
         });
     };
     domain::cache::clean(&input, emit)
+}
+
+// ── v2: analyze, execute_plan, verify ──
+
+#[tauri::command]
+pub async fn analyze_cache_locations(ids: Vec<String>) -> AppResult<CleanPlan> {
+    domain::cache::analyze_locations(&ids)
+}
+
+#[tauri::command]
+pub async fn execute_clean_plan(
+    app: tauri::AppHandle,
+    plan: CleanPlan,
+    opts: ExecutePlanOpts,
+) -> AppResult<CleanReportV2> {
+    let emit = |level: &str, location: &str, message: &str, bytes_freed: u64, files_deleted: u64| {
+        let _ = app.emit(
+            "cache:progress",
+            CacheDebugEvent {
+                level: level.to_string(),
+                location: location.to_string(),
+                message: message.to_string(),
+                bytes_freed,
+                files_deleted,
+            },
+        );
+    };
+    domain::cache::execute_plan(plan, opts, emit).await
+}
+
+#[tauri::command]
+pub async fn verify_clean(plan: CleanPlan, report: CleanReportV2) -> AppResult<VerifyReport> {
+    domain::cache::verify_after_clean(&plan, &report)
 }

@@ -11,10 +11,13 @@ import type {
   CacheLocation,
   CacheScanReport,
   CleanCacheInput,
+  CleanPlan,
   CleanReport,
+  CleanReportV2,
   CreateRestorePointInput,
   DetectedPackage,
   DirectorySize,
+  ExecutePlanOpts,
   LockingProcess,
   ProcessInfo,
   RegistryTweak,
@@ -31,6 +34,7 @@ import type {
   SystemSummary,
   TelemetrySnapshot,
   TweakState,
+  VerifyReport,
 } from "./types";
 
 type InvokeFn = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
@@ -72,6 +76,9 @@ async function initInvoke(): Promise<void> {
         list_cache_locations: [],
         scan_cache_locations: [],
         clean_cache_locations: { cleaned: 0, errors: 0, total_bytes: 0 },
+        analyze_cache_locations: { planId: "", generatedAt: "", ready: [], blocked: [], permissionIssues: [], skipped: [], totalEstimatedBytes: 0, totalBlockedBytes: 0 },
+        execute_clean_plan: { planId: "", runId: "", startedAt: "", finishedAt: "", restorePointSeq: null, perLocation: [], totalBytesFreed: 0, totalBytesScheduledReboot: 0, totalBytesFailed: 0, closedProcesses: [] },
+        verify_clean: { planId: "", verifiedAt: "", perLocation: [], totalActuallyFreed: 0, totalStillPresent: 0 },
         list_bloatware_catalog: [],
         detect_installed_bloatware: [],
         remove_bloatware: { removed: 0, errors: 0 },
@@ -160,6 +167,16 @@ export const scanCacheLocations = (ids: string[]) =>
 
 export const cleanCacheLocations = (input: CleanCacheInput) =>
   invoke<CleanReport>("clean_cache_locations", { input });
+
+// ── cache v2: analyze, execute_plan, verify ─────────────────────────────
+export const analyzeCacheLocations = (ids: string[]) =>
+  invoke<CleanPlan>("analyze_cache_locations", { ids });
+
+export const executeCleanPlan = (plan: CleanPlan, opts: ExecutePlanOpts) =>
+  invoke<CleanReportV2>("execute_clean_plan", { plan, opts });
+
+export const verifyClean = (plan: CleanPlan, report: CleanReportV2) =>
+  invoke<VerifyReport>("verify_clean", { plan, report });
 
 // ── debloat ─────────────────────────────────────────────────────────────
 export const listBloatwareCatalog = () =>

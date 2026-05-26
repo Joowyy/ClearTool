@@ -231,3 +231,25 @@ pub enum LocationStatus {
     Skipped,
     Failed,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerifyReport {
+    pub plan_id: String,
+    pub verified_at: String,
+    pub per_location: Vec<VerifyLocationResult>,
+    pub total_actually_freed: u64,
+    pub total_still_present: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VerifyLocationResult {
+    pub id: String,
+    pub display_name: String,
+    pub bytes_before: u64,
+    pub bytes_after: u64,
+    pub bytes_actually_freed: u64,
+    pub files_pending_reboot: u32,
+    pub success_percent: f32,
+}

@@ -474,3 +474,21 @@ export interface PendingRename {
   destination: string;
   isDelete: boolean;
 }
+
+export interface VerifyReport {
+  planId: string;
+  verifiedAt: string;
+  perLocation: VerifyLocationResult[];
+  totalActuallyFreed: number;
+  totalStillPresent: number;
+}
+
+export interface VerifyLocationResult {
+  id: string;
+  displayName: string;
+  bytesBefore: number;
+  bytesAfter: number;
+  bytesActuallyFreed: number;
+  filesPendingReboot: number;
+  successPercent: number;
+}
