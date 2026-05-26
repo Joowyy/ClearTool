@@ -10,5 +10,6 @@ pub mod processes;
 pub mod registry;
 pub mod restore_point;
 pub mod services;
+pub mod startup;
 pub mod sysmon;
 pub mod uninstaller;

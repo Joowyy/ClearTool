@@ -1,0 +1,29 @@
+{
+  "comment": "Paths, IDs y patrones que NUNCA se tocan, aunque aparezcan en algún catálogo o sean enviados manualmente al cleaner.",
+  "patterns": [
+    "microsoft.windowsterminal_",
+    "microsoft.windowsstore_",
+    "microsoft.desktopappinstaller_",
+    "microsoft.windowsdefender_",
+    "microsoft.sechealthui_",
+    "microsoft.windowscalculator_",
+    "microsoft.windowscamera_",
+    "microsoft.windowsnotepad_",
+    "microsoft.paint_",
+    "microsoft.screensketch_",
+    "microsoft.windowsalarms_",
+    "microsoft.microsoftstickynotes_",
+    "microsoftwindows.client_"
+  ],
+  "exactPaths": [
+    "SYSTEMROOT",
+    "PROGRAMFILES",
+    "PROGRAMFILES(X86)",
+    "USERPROFILE",
+    "WINDIR"
+  ],
+  "ids": [
+    "windows-terminal.cache",
+    "widgets.tempstate"
+  ]
+}

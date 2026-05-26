@@ -127,6 +127,10 @@ pub fn run() {
             ipc::processes::close_gracefully,
             ipc::processes::who_locks_path,
             ipc::processes::release_caches,
+            // startup
+            ipc::startup::list_startup,
+            ipc::startup::disable_startup,
+            ipc::startup::enable_startup,
         ])
         .run(tauri::generate_context!())
         .expect("error mientras se ejecuta la aplicación");

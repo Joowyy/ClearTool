@@ -1,97 +1,55 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Cache Locations Catalog",
+  "title": "Cache Locations Catalog v2",
   "description": "Catálogo de ubicaciones de caché que pueden ser limpias",
   "type": "object",
   "required": ["version", "updatedAt", "entries"],
   "properties": {
-    "$schema": {
-      "type": "string"
-    },
-    "version": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$"
-    },
-    "updatedAt": {
-      "type": "string",
-      "format": "date"
-    },
+    "$schema": { "type": "string" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "updatedAt": { "type": "string", "format": "date" },
     "entries": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": [
-          "id",
-          "displayName",
-          "path",
-          "category",
-          "requiresAdmin",
-          "risk",
-          "preconditions",
-          "filters",
-          "consequences",
-          "averageSize"
-        ],
+        "required": ["id", "displayName", "path", "category", "strategy", "risk"],
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "path": {
-            "type": "string",
-            "description": "Ruta con variables de entorno (%TEMP%, %LOCALAPPDATA%, etc.)"
-          },
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]+$" },
+          "displayName": { "type": "string" },
+          "path": { "type": "string", "description": "Ruta con variables de entorno (%TEMP%, %LOCALAPPDATA%, etc.)" },
           "category": {
             "type": "string",
             "enum": [
-              "user-temp",
-              "system-temp",
-              "windows-update",
-              "logs",
-              "browser-cache",
-              "app-cache",
-              "thumbnails",
-              "ccleaner"
+              "user-temp", "system-temp", "windows-update", "logs",
+              "browser-cache", "app-cache", "thumbnail", "wer",
+              "uwp-cache", "font", "dotnet", "dev-tools", "system-cache"
             ]
           },
-          "requiresAdmin": {
-            "type": "boolean"
-          },
-          "risk": {
+          "strategy": {
             "type": "string",
-            "enum": ["low", "medium", "high"]
+            "enum": [
+              "direct-delete", "browser-aware", "process-locked",
+              "system-restart-required", "take-ownership-and-delete"
+            ]
           },
-          "preconditions": {
+          "lockedBy": {
             "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "items": { "type": "string" },
+            "description": "Nombres de procesos esperables que bloquean este path."
           },
+          "requiresAdmin": { "type": "boolean" },
+          "risk": { "type": "string", "enum": ["safe", "moderate", "dangerous"] },
+          "preconditions": { "type": "array", "items": { "type": "string" } },
           "filters": {
             "type": "object",
             "properties": {
-              "olderThanDays": {
-                "type": "integer"
-              },
-              "exclude": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
+              "olderThanDays": { "type": "integer", "minimum": 0 },
+              "exclude": { "type": "array", "items": { "type": "string" } },
+              "include": { "type": "array", "items": { "type": "string" } }
             }
           },
-          "consequences": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "averageSize": {
-            "type": "string"
-          }
+          "consequences": { "type": "array", "items": { "type": "string" } },
+          "averageSize": { "type": "string" }
         }
       }
     }

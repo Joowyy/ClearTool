@@ -19,6 +19,7 @@ import {
   Sliders,
   FileText,
   Cpu,
+  Power,
 } from "lucide-react";
 import { ROUTES } from "../../lib/routes";
 import { cn } from "../../lib/utils";
@@ -39,6 +40,7 @@ const TABS: TabItem[] = [
   { to: ROUTES.RESTORE, label: "Restauración", icon: RotateCcw },
   { to: ROUTES.AUDIT, label: "Auditoría", icon: FileText },
   { to: ROUTES.PROCESSES, label: "Procesos", icon: Cpu },
+  { to: ROUTES.STARTUP, label: "Arranque", icon: Power },
   { to: ROUTES.SETTINGS, label: "Ajustes", icon: Sliders },
 ];
 

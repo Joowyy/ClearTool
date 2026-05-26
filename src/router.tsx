@@ -11,6 +11,7 @@ import { RestorePage } from "./features/restore-points/restore-page";
 import { AuditPage } from "./features/audit-log/audit-page";
 import { SettingsPage } from "./features/settings/settings-page";
 import { ProcessesPage } from "./features/processes/processes-page";
+import { StartupPage } from "./features/startup/startup-page";
 import { ROUTES } from "./lib/routes";
 
 export const router = createBrowserRouter([
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       { path: ROUTES.RESTORE, element: <RestorePage /> },
       { path: ROUTES.AUDIT, element: <AuditPage /> },
       { path: ROUTES.PROCESSES, element: <ProcessesPage /> },
+      { path: ROUTES.STARTUP, element: <StartupPage /> },
       { path: ROUTES.SETTINGS, element: <SettingsPage /> },
     ],
   },

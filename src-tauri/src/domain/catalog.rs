@@ -1,7 +1,7 @@
 // domain/catalog.rs — carga de catálogos JSON (allowlists).
 
 use crate::core::{AppError, AppResult};
-use crate::models::cache::{CacheCatalogFile, CacheLocation};
+use crate::models::cache::{CacheCatalogFile, CacheDenylist, CacheLocation};
 use crate::models::debloat::{BloatwareCatalogFile, BloatwareEntry};
 use crate::models::registry::{RegistryCatalogFile, RegistryTweak};
 use crate::models::service::{ServiceEntry, ServicesCatalogFile};
@@ -10,6 +10,9 @@ use std::sync::{Mutex, OnceLock};
 
 const CACHE_LOCATIONS_JSON: &str = include_str!(
     "../../../.claude/skills/cache-scanner/RESOURCES/cache-locations.json"
+);
+const CACHE_DENYLIST_JSON: &str = include_str!(
+    "../../../.claude/skills/cache-scanner/RESOURCES/cache-denylist.json"
 );
 const BLOATWARE_CATALOG_JSON: &str = include_str!(
     "../../../.claude/skills/powershell-debloat/RESOURCES/bloatware-catalog.json"
@@ -22,6 +25,7 @@ const REGISTRY_TWEAKS_JSON: &str = include_str!(
 );
 
 static CACHE_LOCATIONS: OnceLock<Mutex<Option<Vec<CacheLocation>>>> = OnceLock::new();
+static CACHE_DENYLIST: OnceLock<Mutex<Option<CacheDenylist>>> = OnceLock::new();
 static BLOATWARE_CATALOG: OnceLock<Mutex<Option<Vec<BloatwareEntry>>>> = OnceLock::new();
 static SERVICES_CATALOG: OnceLock<Mutex<Option<Vec<ServiceEntry>>>> = OnceLock::new();
 static REGISTRY_TWEAKS: OnceLock<Mutex<Option<Vec<RegistryTweak>>>> = OnceLock::new();
@@ -41,6 +45,40 @@ pub fn load_cache_locations() -> AppResult<Vec<CacheLocation>> {
     let entries = envelope.entries;
     *guard = Some(entries.clone());
     Ok(entries)
+}
+
+pub fn load_cache_denylist() -> AppResult<CacheDenylist> {
+    let lock = CACHE_DENYLIST.get_or_init(|| Mutex::new(None));
+    let mut guard = lock.lock().map_err(|_| AppError::Catalog("denylist lock poisoned".into()))?;
+    if let Some(ref deny) = *guard {
+        return Ok(deny.clone());
+    }
+    let deny: CacheDenylist = serde_json::from_str(CACHE_DENYLIST_JSON)
+        .map_err(|e| AppError::Catalog(format!("cache-denylist.json: {e}")))?;
+    *guard = Some(deny.clone());
+    Ok(deny)
+}
+
+pub fn is_cache_path_denied(resolved_path: &str, id: &str) -> bool {
+    let deny = match load_cache_denylist() {
+        Ok(d) => d,
+        Err(_) => return false,
+    };
+    let path_lower = resolved_path.to_lowercase();
+    if deny.patterns.iter().any(|p| path_lower.contains(&p.to_lowercase())) {
+        return true;
+    }
+    if deny.ids.iter().any(|did| did == id) {
+        return true;
+    }
+    for ep in &deny.exact_paths {
+        if let Ok(resolved) = std::env::var(ep.trim_matches('%')) {
+            if path_lower.eq_ignore_ascii_case(&resolved.to_lowercase()) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 pub fn load_bloatware_catalog() -> AppResult<Vec<BloatwareEntry>> {
@@ -111,6 +149,7 @@ pub fn is_registry_tweak_allowed(id: &str) -> bool {
 
 pub fn validate_all() -> AppResult<()> {
     load_cache_locations()?;
+    load_cache_denylist()?;
     load_bloatware_catalog()?;
     load_services_catalog()?;
     load_registry_tweaks()?;

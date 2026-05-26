@@ -28,6 +28,7 @@ import type {
   RestoreReport,
   ScanTreeHandle,
   ScanTreeInput,
+  StartupEntry,
   TreeNode,
   Service,
   Settings,
@@ -116,6 +117,9 @@ async function initInvoke(): Promise<void> {
         close_gracefully: true,
         who_locks_path: [],
         release_caches: { closedCount: 0, failedCount: 0, closedProcesses: [] },
+        list_startup: [],
+        disable_startup: undefined,
+        enable_startup: undefined,
       };
 
       cachedInvoke = async <T>(command: string, _args?: Record<string, unknown>): Promise<T> => {
@@ -253,3 +257,8 @@ export const closeGracefully = (pid: number, timeoutMs: number) =>
 export const whoLocksPath = (path: string) =>
   invoke<LockingProcess[]>("who_locks_path", { path });
 export const releaseCaches = () => invoke<ReleaseReport>("release_caches");
+
+// ── startup ─────────────────────────────────────────────────────────────
+export const listStartup = () => invoke<StartupEntry[]>("list_startup");
+export const disableStartup = (id: string) => invoke<void>("disable_startup", { id });
+export const enableStartup = (id: string) => invoke<void>("enable_startup", { id });

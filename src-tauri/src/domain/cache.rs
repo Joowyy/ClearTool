@@ -261,6 +261,26 @@ pub fn file_passes_filters(path: &Path, metadata: &std::fs::Metadata, filters: &
         }
     }
 
+    if !filters.include.is_empty() {
+        let matches_include = filters.include.iter().any(|pattern| {
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if glob_match(pattern, name) {
+                    return true;
+                }
+            }
+            if pattern.contains("**") || pattern.contains('/') || pattern.contains('\\') {
+                let path_str = path.to_string_lossy();
+                if glob_match(pattern, &path_str) {
+                    return true;
+                }
+            }
+            false
+        });
+        if !matches_include {
+            return false;
+        }
+    }
+
     for pattern in &filters.exclude {
         if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
             if glob_match(pattern, name) {
@@ -324,25 +344,8 @@ pub fn expand_path(template: &str) -> String {
 
 // ── v2: analyze_locations, execute_plan, verify_after_clean ──
 
-/// Denylist: IDs y paths que NUNCA se tocan.
-const FORBIDDEN_IDS: &[&str] = &[];
-const FORBIDDEN_PATTERNS: &[&str] = &[
-    "microsoft.windowsterminal",
-    "microsoft.windowsstore",
-    "microsoft.desktopappinstaller",
-    "microsoft.windowsdefender",
-    "microsoft.sechealthui",
-    "\\appx\\",
-];
-
 pub fn is_disallowed(id: &str, path: &str) -> bool {
-    if FORBIDDEN_IDS.contains(&id) {
-        return true;
-    }
-    let path_lower = path.to_lowercase();
-    FORBIDDEN_PATTERNS
-        .iter()
-        .any(|p| path_lower.contains(p))
+    catalog::is_cache_path_denied(path, id)
 }
 
 /// Analiza las ubicaciones del catálogo y devuelve un CleanPlan clasificado.
@@ -450,7 +453,7 @@ pub fn analyze_locations(ids: &[String]) -> AppResult<CleanPlan> {
                 resolved_path: resolved,
                 bytes,
                 file_count,
-                strategy: parse_strategy(&entry.category, &entry.path),
+                strategy: resolve_strategy(&entry.strategy, &entry.category, &entry.path),
                 age_oldest_file: oldest,
             });
         }
@@ -555,6 +558,20 @@ fn suggest_action(lockers: &[LockingProcess], _category: &str) -> BlockedAction 
     BlockedAction::SkipOnly {
         reason: "Bloqueado por proceso del sistema sin UI".into(),
     }
+}
+
+fn resolve_strategy(catalog_strategy: &Option<String>, category: &str, path: &str) -> CleanStrategy {
+    if let Some(s) = catalog_strategy {
+        match s.to_lowercase().as_str() {
+            "direct-delete" => return CleanStrategy::DirectDelete,
+            "browser-aware" => return CleanStrategy::BrowserAware,
+            "process-locked" => return CleanStrategy::ProcessLocked,
+            "system-restart-required" => return CleanStrategy::SystemRestartRequired,
+            "take-ownership-and-delete" => return CleanStrategy::TakeOwnershipAndDelete,
+            _ => {}
+        }
+    }
+    parse_strategy(category, path)
 }
 
 fn parse_strategy(category: &str, path: &str) -> CleanStrategy {

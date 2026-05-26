@@ -13,6 +13,7 @@ pub mod registry;
 pub mod restore;
 pub mod service;
 pub mod settings;
+pub mod startup;
 pub mod system;
 pub mod telemetry;
 pub mod tree;

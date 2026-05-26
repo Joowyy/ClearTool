@@ -62,12 +62,15 @@ export interface CacheLocation {
   displayName: string;
   path: string;
   category?: string | null;
+  strategy?: string | null;
+  lockedBy?: string[];
   requiresAdmin?: boolean;
   risk?: string | null;
   preconditions?: string[];
   filters?: {
     olderThanDays?: number;
     exclude?: string[];
+    include?: string[];
   };
   consequences?: string[];
   averageSize?: string | null;
@@ -372,7 +375,7 @@ export interface Settings {
 
 export type CleanStrategy =
   | "direct-delete"
-  | { uwpAppAware: { packageFamilyName: string } }
+  | "uwp-app-aware"
   | "browser-aware"
   | "process-locked"
   | "system-restart-required"
@@ -491,4 +494,42 @@ export interface VerifyLocationResult {
   bytesActuallyFreed: number;
   filesPendingReboot: number;
   successPercent: number;
+}
+
+// ── Startup Manager ────────────────────────────────────────────────────
+
+export type StartupImpact = "unknown" | "low" | "medium" | "high";
+export type StartupCategory =
+  | "updater"
+  | "launcher"
+  | "widget"
+  | "cloud-sync"
+  | "communication"
+  | "media"
+  | "security"
+  | "driver"
+  | "user-app"
+  | "system"
+  | "unknown";
+
+export type StartupOrigin =
+  | { kind: "registry"; hive: string; key: string; name: string }
+  | { kind: "startupFolder"; lnkPath: string }
+  | { kind: "scheduledTask"; taskPath: string }
+  | { kind: "service"; serviceName: string }
+  | { kind: "uwpAutoStart"; packageFamilyName: string; taskId: string };
+
+export interface StartupEntry {
+  id: string;
+  origin: StartupOrigin;
+  displayName: string;
+  command: string;
+  exePath: string | null;
+  iconPath: string | null;
+  publisher: string | null;
+  signatureValid: boolean | null;
+  impact: StartupImpact;
+  lastModified: string | null;
+  enabled: boolean;
+  category: StartupCategory;
 }

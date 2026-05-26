@@ -12,5 +12,6 @@ pub mod explorer;
 pub mod registry;
 pub mod restore;
 pub mod services;
+pub mod startup;
 pub mod system_info;
 pub mod telemetry;

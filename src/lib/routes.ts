@@ -9,4 +9,5 @@ export const ROUTES = {
   AUDIT: "/audit",
   SETTINGS: "/settings",
   PROCESSES: "/processes",
+  STARTUP: "/startup",
 } as const;

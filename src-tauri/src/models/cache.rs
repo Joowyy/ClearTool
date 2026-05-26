@@ -18,6 +18,8 @@ pub struct CacheFilters {
     pub older_than_days: Option<u64>,
     #[serde(default)]
     pub exclude: Vec<String>,
+    #[serde(default)]
+    pub include: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,6 +44,10 @@ pub struct CacheLocation {
     pub filters: CacheFilters,
     #[serde(default)]
     pub min_windows_build: Option<u32>,
+    #[serde(default)]
+    pub strategy: Option<String>,
+    #[serde(default)]
+    pub locked_by: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -252,4 +258,14 @@ pub struct VerifyLocationResult {
     pub bytes_actually_freed: u64,
     pub files_pending_reboot: u32,
     pub success_percent: f32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CacheDenylist {
+    pub patterns: Vec<String>,
+    #[serde(default)]
+    pub exact_paths: Vec<String>,
+    #[serde(default)]
+    pub ids: Vec<String>,
 }
