@@ -176,6 +176,7 @@ pub enum SkipReason {
     Empty,
     DisallowedByAllowlist,
     Precondition { name: String },
+    UserIgnored,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -258,6 +259,114 @@ pub struct VerifyLocationResult {
     pub bytes_actually_freed: u64,
     pub files_pending_reboot: u32,
     pub success_percent: f32,
+    #[serde(default)]
+    pub residuals: Vec<ResidualEntry>,
+}
+
+// ── Doc 15: clasificación de bytes residuales ─────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ResidualEntry {
+    pub path: String,
+    pub bytes: u64,
+    pub reason: ResidualReason,
+    /// Hasta 3 rutas de muestra para que el usuario reconozca el contenido.
+    pub sample_files: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum ResidualReason {
+    LockedBySystem { suggested_action: String },
+    PendingReboot,
+    AccessDenied,
+    FilteredOut,
+    ReparsePoint,
+    Unknown,
+}
+
+impl Default for ResidualReason {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
+
+// ── Doc 09: pipeline de eventos enriquecidos ──────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum CleanPhase {
+    Preparing,
+    CreatingRestorePoint,
+    ClosingProcesses,
+    Cleaning,
+    SchedulingReboot,
+    Verifying,
+    Complete,
+    Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanLogLine {
+    pub level: String,
+    pub location: String,
+    pub message: String,
+    pub timestamp_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanProgressPayload {
+    pub run_id: String,
+    pub phase: CleanPhase,
+    pub current_location_id: Option<String>,
+    pub current_location_display_name: Option<String>,
+    pub current_location_index: u32,
+    pub total_locations: u32,
+    pub bytes_freed: u64,
+    pub bytes_scheduled: u64,
+    pub total_estimated_bytes: u64,
+    pub files_deleted: u32,
+    pub files_scheduled: u32,
+    pub files_failed: u32,
+    pub elapsed_ms: u64,
+    pub eta_secs: Option<f32>,
+    /// true cuando el ETA viene de la ventana móvil (throughput estable).
+    /// false cuando es estimación amplia (acumulado o fallback).
+    #[serde(default)]
+    pub eta_is_precise: bool,
+    pub throughput_bytes_per_sec: u64,
+    pub last_line: Option<CleanLogLine>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanPhaseEvent {
+    pub run_id: String,
+    pub phase: CleanPhase,
+    pub elapsed_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanSummaryPayload {
+    pub run_id: String,
+    pub success: bool,
+    pub duration_ms: u64,
+    pub total_bytes_freed: u64,
+    pub total_bytes_scheduled_reboot: u64,
+    pub total_files_deleted: u32,
+    pub total_files_scheduled_reboot: u32,
+    pub total_files_failed: u32,
+    pub locations_processed: u32,
+    pub locations_with_errors: Vec<String>,
+    pub restore_point_seq: Option<u32>,
+    pub mean_throughput_bytes_per_sec: u64,
+    pub report: CleanReportV2,
+    #[serde(default)]
+    pub cancelled: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]

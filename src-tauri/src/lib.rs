@@ -92,9 +92,12 @@ pub fn run() {
             ipc::cache::clean_cache_locations,
             ipc::cache::analyze_cache_locations,
             ipc::cache::execute_clean_plan,
+            ipc::cache::cancel_clean_plan,
             ipc::cache::verify_clean,
             ipc::cache::get_cache_plan_warm,
             ipc::cache::refresh_cache_plan,
+            ipc::cache::get_throughput_stats,
+            ipc::cache::ignore_residual_path,
             // debloat
             ipc::debloat::list_bloatware_catalog,
             ipc::debloat::detect_installed_bloatware,

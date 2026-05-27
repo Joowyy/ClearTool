@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, memo } from "react";
+import { useState, useCallback, useEffect, memo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Trash2,
@@ -19,6 +19,7 @@ import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Badge } from "../../components/ui/badge";
 import { formatBytes } from "../../lib/utils";
+import { formatBytes as fmtBytes, formatDuration } from "../../lib/format";
 import {
   listCacheLocations,
   analyzeCacheLocations,
@@ -42,6 +43,9 @@ import {
 import { EmptyState } from "../../components/empty-state";
 import { formatError } from "../../lib/errors";
 import { toast } from "../../lib/toast";
+import { CleanConsole } from "./clean-console";
+import { useCleanStream } from "./use-clean-stream";
+import { useThroughputStats } from "./use-throughput-stats";
 
 function riskVariant(risk?: string | null): "success" | "warning" | "destructive" {
   const r = (risk ?? "").toLowerCase();
@@ -252,6 +256,33 @@ const LocationRow = memo(function LocationRow({
   );
 });
 
+// ── EstimatedTime (Doc 12) ────────────────────────────────────────────
+
+function EstimatedTime({ bytes }: { bytes: number }) {
+  const { data } = useThroughputStats();
+  if (bytes === 0) return null;
+  const sampleCount = data?.samples?.length ?? 0;
+  const bps =
+    sampleCount >= 5
+      ? (data?.p95BytesPerSec ?? 100 * 1024 * 1024)
+      : (data?.meanBytesPerSec ?? 100 * 1024 * 1024);
+  const secs = bytes / bps;
+  const estimate = Math.max(3, secs);
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <Clock className="h-3.5 w-3.5" />
+      <span>
+        Tiempo estimado:{" "}
+        <span className="text-foreground font-medium">~{formatDuration(estimate)}</span>
+        {sampleCount === 0 && (
+          <span className="text-muted-foreground/60"> (primera limpieza, estimación aproximada)</span>
+        )}
+      </span>
+    </div>
+  );
+}
+
 // ── PlanView ───────────────────────────────────────────────────────────
 
 interface PlanViewProps {
@@ -301,15 +332,16 @@ function PlanView({
         </Button>
       </div>
 
-      <div className="flex gap-4 text-sm">
+      <div className="flex gap-4 text-sm items-center flex-wrap">
         <div className="px-3 py-1.5 rounded-lg bg-green-900/20 border border-green-800/40">
           <span className="text-green-400 font-medium">Se libera ahora: </span>
-          <span className="text-muted-foreground">{formatBytes(plan.totalEstimatedBytes)}</span>
+          <span className="text-muted-foreground">{fmtBytes(plan.totalEstimatedBytes)}</span>
         </div>
         <div className="px-3 py-1.5 rounded-lg bg-yellow-900/20 border border-yellow-800/40">
           <span className="text-yellow-400 font-medium">Se libera al reiniciar: </span>
-          <span className="text-muted-foreground">{formatBytes(plan.totalBlockedBytes)}</span>
+          <span className="text-muted-foreground">{fmtBytes(plan.totalBlockedBytes)}</span>
         </div>
+        <EstimatedTime bytes={plan.totalEstimatedBytes} />
       </div>
 
       <div className="flex-1 overflow-auto flex flex-col gap-3">
@@ -580,9 +612,8 @@ export function CachePage() {
   const [plan, setPlan] = useState<CleanPlan | null>(null);
   const [report, setReport] = useState<CleanReportV2 | null>(null);
   const [verify, setVerify] = useState<VerifyReport | null>(null);
-  // Logs de progreso con throttle para no saturar el render durante la limpieza.
-  const progressQueueRef = useRef<string[]>([]);
-  const [progressLogs, setProgressLogs] = useState<string[]>([]);
+  const [consoleOpen, setConsoleOpen] = useState(false);
+  const cleanStream = useCleanStream();
 
   const {
     data: catalog = [],
@@ -628,17 +659,12 @@ export function CachePage() {
     return () => clearInterval(id);
   }, [plan, qc]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Throttle: aplica los logs de progreso al estado cada 200 ms
-  // para no redibujarlo 50+ veces en pocos segundos.
+  // Al desmontar la página, limpiar el stream para que la próxima visita arranque virgen.
   useEffect(() => {
-    const id = setInterval(() => {
-      const queue = progressQueueRef.current;
-      if (queue.length === 0) return;
-      progressQueueRef.current = [];
-      setProgressLogs((prev) => [...prev, ...queue].slice(-100));
-    }, 200);
-    return () => clearInterval(id);
-  }, []);
+    return () => {
+      cleanStream.reset();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const analyzeMutation = useMutation({
     mutationFn: () => analyzeCacheLocations([...selectedIds]),
@@ -646,7 +672,6 @@ export function CachePage() {
       setPlan(p);
       setReport(null);
       setVerify(null);
-      setProgressLogs([]);
     },
     onError: (err) => toast.error("Error analizando ubicaciones", { description: formatError(err) }),
   });
@@ -658,8 +683,8 @@ export function CachePage() {
       dryRun: boolean;
     }) => {
       if (!plan) throw new Error("No hay plan");
-      setProgressLogs([]);
-      progressQueueRef.current = [];
+      cleanStream.reset();
+      setConsoleOpen(true);
       const r = await executeCleanPlan(plan, {
         planId: plan.planId,
         autoCloseBlocking: opts.autoCloseBlocking,
@@ -675,10 +700,10 @@ export function CachePage() {
       setReport(r);
       setVerify(v);
       if (!dryRun) {
-        // Invalidar el plan caliente (no el catálogo estático de ubicaciones).
         void qc.invalidateQueries({ queryKey: ["cache-plan-warm"] });
         setPlan(null);
       }
+      // Toast se mantiene — el usuario explícitamente lo pidió.
       toast.success(
         dryRun ? "Simulación completada" : `Liberados ${formatBytes(r.totalBytesFreed)}`,
         {
@@ -689,8 +714,18 @@ export function CachePage() {
         }
       );
     },
-    onError: (err) => toast.error("Error ejecutando limpieza", { description: formatError(err) }),
+    onError: (err) => {
+      // Dejar la consola abierta para que el usuario vea el log con el error.
+      toast.error("Error ejecutando limpieza", { description: formatError(err) });
+    },
   });
+
+  const handleConsoleClose = useCallback(() => {
+    setConsoleOpen(false);
+    cleanStream.reset();
+    void qc.invalidateQueries({ queryKey: ["cache-plan-warm"] });
+    void qc.invalidateQueries({ queryKey: ["throughput-stats"] });
+  }, [cleanStream, qc]);
 
   const handleAnalyze = useCallback(() => {
     analyzeMutation.mutate();
@@ -737,11 +772,12 @@ export function CachePage() {
           verify={verify}
         />
       )}
-      {progressLogs.length > 0 && executeMutation.isPending && (
-        <div className="text-xs text-muted-foreground font-mono bg-card/50 border border-border/50 rounded p-2 max-h-24 overflow-y-auto">
-          {progressLogs.map((l, i) => <div key={i}>{l}</div>)}
-        </div>
-      )}
+
+      <CleanConsole
+        open={consoleOpen}
+        isRunning={executeMutation.isPending}
+        onClose={handleConsoleClose}
+      />
     </div>
   );
 }

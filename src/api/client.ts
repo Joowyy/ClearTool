@@ -110,6 +110,11 @@ async function initInvoke(): Promise<void> {
           totalBlockedBytes: 0,
         },
         get_cache_plan_warm: null,
+        get_throughput_stats: {
+          samples: [],
+          meanBytesPerSec: 104857600,
+          p95BytesPerSec: 104857600,
+        },
         refresh_cache_plan: {
           planId: "",
           generatedAt: "",
@@ -276,14 +281,25 @@ export const analyzeCacheLocations = (ids: string[]) =>
 export const executeCleanPlan = (plan: CleanPlan, opts: ExecutePlanOpts) =>
   invoke<CleanReportV2>("execute_clean_plan", { plan, opts });
 
+export const cancelCleanPlan = (runId: string) =>
+  invoke<boolean>("cancel_clean_plan", { runId });
+
 export const verifyClean = (plan: CleanPlan, report: CleanReportV2) =>
   invoke<VerifyReport>("verify_clean", { plan, report });
+
+export const ignoreResidualPath = (path: string) =>
+  invoke<void>("ignore_residual_path", { path });
 
 export const getCachePlanWarm = () =>
   invoke<CleanPlan | null>("get_cache_plan_warm");
 
 export const refreshCachePlan = () =>
   invoke<CleanPlan>("refresh_cache_plan");
+
+export const getThroughputStats = () =>
+  invoke<{ samples: number[]; meanBytesPerSec: number; p95BytesPerSec: number }>(
+    "get_throughput_stats"
+  );
 
 // ── debloat ─────────────────────────────────────────────────────────────
 export const listBloatwareCatalog = () =>
