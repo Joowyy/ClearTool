@@ -18,20 +18,32 @@ ejecución** y, por tanto, qué modelo de IA debería atacarlos:
 
 ```
 docs/cache-refinement/
-├── README.md                  ← este archivo (mapa global)
-├── sonnet-4.6/                ← tareas DIFÍCILES (backend Rust, internals)
+├── README.md                            ← este archivo (mapa global)
+├── sonnet-4.6/                          ← tareas DIFÍCILES (backend Rust, internals, R3F)
 │   ├── README.md
-│   ├── 01-shell-safe-close.md
-│   ├── 02-auto-analyze-on-boot.md
-│   ├── 05-three-context-lost.md
-│   └── 08-redundancias-y-perf.md
-└── qwen-3.6-plus/             ← tareas FÁCILES (config, copy, HTML)
+│   ├── 01-shell-safe-close.md           ✅ Set A
+│   ├── 02-auto-analyze-on-boot.md       ✅ Set A
+│   ├── 05-three-context-lost.md         ✅ Set A
+│   ├── 08-redundancias-y-perf.md        ✅ Set A
+│   ├── 09-progress-pipeline-backend.md  ⏳ Set B — consola de limpieza
+│   ├── 10-clean-console-frontend.md     ⏳ Set B
+│   ├── 11-clean-visualizer-r3f.md       ⏳ Set B
+│   └── 12-eta-estimate-and-summary.md   ⏳ Set B
+└── qwen-3.6-plus/                       ← tareas FÁCILES (config, copy, HTML)
     ├── README.md
-    ├── 03-button-in-button.md
-    ├── 04-react-router-future-flags.md
-    ├── 06-window-size.md
-    └── 07-plan-view-copy.md
+    ├── 03-button-in-button.md           ✅
+    ├── 04-react-router-future-flags.md  ✅
+    ├── 06-window-size.md                ✅
+    └── 07-plan-view-copy.md             ✅
 ```
+
+**Set A — Refinamiento base** (P0/P1): proteger el shell, auto-analyze
+al boot, Three.js Context Lost, redundancias. Ya implementado.
+
+**Set B — Consola de limpieza** (P1/P2): sustituir el spinner de
+"Limpiar" por una consola visual con animación 3D, ETA y resumen
+final. Cuatro bloques que se implementan en orden estricto: 09 → 10 →
+11 → 12.
 
 ### ¿Por qué Sonnet 4.6 para lo difícil?
 
@@ -64,6 +76,10 @@ docs/cache-refinement/
 | 06 | Ventana muy pequeña; se siente apretada | 🟢 P2 | Qwen 3.6 Plus | [`qwen-3.6-plus/06-window-size.md`](qwen-3.6-plus/06-window-size.md) |
 | 07 | Copy "Listas/Bloqueadas/Permisos/Omitidas" no comunica al no-técnico | 🟡 P1 | Qwen 3.6 Plus | [`qwen-3.6-plus/07-plan-view-copy.md`](qwen-3.6-plus/07-plan-view-copy.md) |
 | 08 | Redundancias generales — análisis duplicado, refetch innecesario | 🟢 P2 | Sonnet 4.6 | [`sonnet-4.6/08-redundancias-y-perf.md`](sonnet-4.6/08-redundancias-y-perf.md) |
+| 09 | El "Limpiar" sólo muestra un spinner mudo — no hay feedback de progreso/ETA | 🟡 P1 | Sonnet 4.6 | [`sonnet-4.6/09-progress-pipeline-backend.md`](sonnet-4.6/09-progress-pipeline-backend.md) |
+| 10 | Falta una consola visual con fase, barra y log durante la limpieza | 🟡 P1 | Sonnet 4.6 | [`sonnet-4.6/10-clean-console-frontend.md`](sonnet-4.6/10-clean-console-frontend.md) |
+| 11 | El usuario pidió "animaciones 3D" en la consola de limpieza | 🟢 P2 | Sonnet 4.6 | [`sonnet-4.6/11-clean-visualizer-r3f.md`](sonnet-4.6/11-clean-visualizer-r3f.md) |
+| 12 | No se ve ETA antes de pulsar Limpiar ni resumen rico al terminar | 🟡 P1 | Sonnet 4.6 | [`sonnet-4.6/12-eta-estimate-and-summary.md`](sonnet-4.6/12-eta-estimate-and-summary.md) |
 
 Cada documento sigue el formato:
 
@@ -85,6 +101,8 @@ hasta que esta corrección esté revisada por `security-auditor`.
 
 Luego (puede haber paralelismo entre Sonnet y Qwen):
 
+### Set A — Refinamiento base (estado: ✅ implementado en `0e3110d`/`64b8632`)
+
 1. **Sonnet → 01** — proteger el shell (bloquea el resto del backend).
 2. **Qwen → 07** — re-copy del PlanView (cambia cómo el usuario percibe
    el resto).
@@ -94,6 +112,20 @@ Luego (puede haber paralelismo entre Sonnet y Qwen):
    porque el dashboard se queda más quieto).
 5. **Qwen → 03, 04, 06** — fixes paralelos y cosméticos.
 6. **Sonnet → 08** — redundancias y perf (depende de 02).
+
+### Set B — Consola de limpieza (estado: ⏳ pendiente)
+
+Estricto en este orden, sin paralelismo (cada uno depende del anterior):
+
+7. **Sonnet → 09** — pipeline de eventos enriquecidos del backend
+   (CleanProgressPayload, CleanPhase, CleanSummaryPayload + throughput
+   stats persistidos).
+8. **Sonnet → 10** — componente `CleanConsole` (modal + header con
+   fase/ETA/barra + log scrolleable; el toast se mantiene).
+9. **Sonnet → 11** — visualizador 3D R3F (anillo + halo + partículas
+   en el header de la consola).
+10. **Sonnet → 12** — estimación previa en PlanView + `CleanSummaryHero`
+    al terminar + invalidación de queries al cerrar.
 
 ---
 
@@ -129,13 +161,24 @@ Luego (puede haber paralelismo entre Sonnet y Qwen):
 
 ## Estado
 
+### Set A — Refinamiento base
+
 | Doc | Carpeta | Generado | Implementado | Verificado |
 |---|---|---|---|---|
-| 01-shell-safe-close | sonnet-4.6 | ✅ | ❌ | ❌ |
-| 02-auto-analyze-on-boot | sonnet-4.6 | ✅ | ❌ | ❌ |
-| 05-three-context-lost | sonnet-4.6 | ✅ | ❌ | ❌ |
-| 08-redundancias-y-perf | sonnet-4.6 | ✅ | ❌ | ❌ |
-| 03-button-in-button | qwen-3.6-plus | ✅ | ❌ | ❌ |
-| 04-react-router-future-flags | qwen-3.6-plus | ✅ | ❌ | ❌ |
-| 06-window-size | qwen-3.6-plus | ✅ | ❌ | ❌ |
-| 07-plan-view-copy | qwen-3.6-plus | ✅ | ❌ | ❌ |
+| 01-shell-safe-close | sonnet-4.6 | ✅ | ✅ | ✅ (tests Rust) |
+| 02-auto-analyze-on-boot | sonnet-4.6 | ✅ | ✅ | ✅ (+ fix `tauri::async_runtime`) |
+| 05-three-context-lost | sonnet-4.6 | ✅ | ✅ | ✅ |
+| 08-redundancias-y-perf | sonnet-4.6 | ✅ | ✅ | ✅ |
+| 03-button-in-button | qwen-3.6-plus | ✅ | ✅ | ✅ (+ fix `id="pending-renames-list"`) |
+| 04-react-router-future-flags | qwen-3.6-plus | ✅ | ✅ | ✅ (+ fix `v7_startTransition` en `<RouterProvider>`) |
+| 06-window-size | qwen-3.6-plus | ✅ | ✅ | ✅ |
+| 07-plan-view-copy | qwen-3.6-plus | ✅ | ✅ | ✅ |
+
+### Set B — Consola de limpieza
+
+| Doc | Carpeta | Generado | Implementado | Verificado |
+|---|---|---|---|---|
+| 09-progress-pipeline-backend | sonnet-4.6 | ✅ | ❌ | ❌ |
+| 10-clean-console-frontend | sonnet-4.6 | ✅ | ❌ | ❌ |
+| 11-clean-visualizer-r3f | sonnet-4.6 | ✅ | ❌ | ❌ |
+| 12-eta-estimate-and-summary | sonnet-4.6 | ✅ | ❌ | ❌ |
