@@ -10,11 +10,13 @@ interface AppStore {
   sidebarCollapsed: boolean;
   followSystem: boolean;
   isElevated: boolean;
+  shortcutsModalOpen: boolean;
   setTheme: (t: Theme) => void;
   setDensity: (d: Density) => void;
   toggleSidebar: () => void;
   setFollowSystem: (v: boolean) => void;
   setElevated: (v: boolean) => void;
+  toggleShortcutsModal: () => void;
   applyAppearance: () => void;
 }
 
@@ -31,6 +33,7 @@ export const useAppStore = create<AppStore>()(
       sidebarCollapsed: false,
       followSystem: false,
       isElevated: false,
+      shortcutsModalOpen: false,
       setTheme: (theme) => {
         set({ theme });
         applyCssVars(theme, get().density);
@@ -42,6 +45,7 @@ export const useAppStore = create<AppStore>()(
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       setFollowSystem: (followSystem) => set({ followSystem }),
       setElevated: (isElevated) => set({ isElevated }),
+      toggleShortcutsModal: () => set((s) => ({ shortcutsModalOpen: !s.shortcutsModalOpen })),
       applyAppearance: () => {
         const { theme, density } = get();
         applyCssVars(theme, density);

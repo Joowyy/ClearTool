@@ -10,6 +10,10 @@ import {
   Loader2,
   ArrowLeft,
   RefreshCw,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  X,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -20,6 +24,9 @@ import {
   analyzeCacheLocations,
   executeCleanPlan,
   verifyClean,
+  listPendingRenames,
+  cancelPendingRename,
+  clearAllPendingRenames,
   type CacheLocation,
   type CleanPlan,
   type CleanReportV2,
@@ -28,6 +35,7 @@ import {
   type PermissionLocation,
   type SkippedLocation,
   type ReadyLocation,
+  type PendingRename,
 } from "../../api";
 import { EmptyState } from "../../components/empty-state";
 import { formatError } from "../../lib/errors";
@@ -457,6 +465,101 @@ function PlanView({
   );
 }
 
+// ── PendingRenamesPanel ────────────────────────────────────────────────
+
+function PendingRenamesPanel() {
+  const qc = useQueryClient();
+  const [expanded, setExpanded] = useState(false);
+
+  const { data: entries = [], isLoading } = useQuery({
+    queryKey: ["pending-renames"],
+    queryFn: listPendingRenames,
+    refetchOnWindowFocus: false,
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (source: string) => cancelPendingRename(source),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["pending-renames"] });
+      toast.success("Entrada cancelada");
+    },
+    onError: (err) => toast.error("Error al cancelar", { description: formatError(err) }),
+  });
+
+  const clearAllMutation = useMutation({
+    mutationFn: clearAllPendingRenames,
+    onSuccess: (count) => {
+      void qc.invalidateQueries({ queryKey: ["pending-renames"] });
+      toast.success(`${count} entrada${count !== 1 ? "s" : ""} cancelada${count !== 1 ? "s" : ""}`);
+    },
+    onError: (err) => toast.error("Error al cancelar todo", { description: formatError(err) }),
+  });
+
+  if (isLoading || entries.length === 0) return null;
+
+  return (
+    <div className="panel rounded-lg border border-edge-default/20 overflow-hidden">
+      <button
+        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-white/5 transition-colors"
+        onClick={() => setExpanded((e) => !e)}
+      >
+        <div className="flex items-center gap-2">
+          <Clock className="h-3.5 w-3.5 text-amber-400" />
+          <span className="text-xs font-medium text-ink-primary">
+            {entries.length} archivo{entries.length !== 1 ? "s" : ""} programado{entries.length !== 1 ? "s" : ""} para borrar en el próximo reboot
+          </span>
+          <Badge variant="warning" className="text-[10px]">reboot pendiente</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-[11px] text-red-400 hover:text-red-300"
+            onClick={(e) => {
+              e.stopPropagation();
+              clearAllMutation.mutate();
+            }}
+            disabled={clearAllMutation.isPending}
+          >
+            {clearAllMutation.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+            ) : null}
+            Cancelar todos
+          </Button>
+          {expanded ? (
+            <ChevronUp className="h-3.5 w-3.5 text-ink-tertiary" />
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5 text-ink-tertiary" />
+          )}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-edge-default/10 divide-y divide-edge-default/10 max-h-48 overflow-y-auto">
+          {entries.map((entry: PendingRename) => (
+            <div
+              key={entry.source}
+              className="flex items-center gap-2 px-4 py-2 text-xs"
+            >
+              <span className="flex-1 font-mono text-ink-secondary truncate" title={entry.source}>
+                {entry.source}
+              </span>
+              <button
+                className="text-ink-muted hover:text-red-400 transition-colors flex-shrink-0"
+                onClick={() => cancelMutation.mutate(entry.source)}
+                disabled={cancelMutation.isPending}
+                title="Cancelar entrada"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── CachePage ──────────────────────────────────────────────────────────
 
 export function CachePage() {
@@ -547,6 +650,7 @@ export function CachePage() {
 
   return (
     <div className="p-6 flex flex-col gap-4 h-full">
+      <PendingRenamesPanel />
       {!plan ? (
         <SelectionView
           catalog={catalog}

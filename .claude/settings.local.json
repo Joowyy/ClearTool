@@ -16,7 +16,20 @@
       "Bash(cp 02-backend-rust.md v1/)",
       "Bash(cp 03-frontend-react.md v1/)",
       "Bash(cp 05-security.md v1/)",
-      "Bash(rmdir 'z:/NewEra/Proyectos/ProyectosPersonales/ClearTool/.claude/specs/v2/04-modules' 2>&1 && echo \"Carpeta vacía eliminada\")"
+      "Bash(rmdir 'z:/NewEra/Proyectos/ProyectosPersonales/ClearTool/.claude/specs/v2/04-modules' 2>&1 && echo \"Carpeta vacía eliminada\")",
+      "Bash(grep -rn \"with_context\\\\|\\\\\\\\.with_context\\(\" src-tauri/src)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(cargo test *)",
+      "Bash(npx vitest *)",
+      "Bash(echo \"===EXIT=$?===\")",
+      "Bash(npx vite *)",
+      "Bash(npm list *)",
+      "Bash(cargo doc *)",
+      "Bash(cd \"z:\\\\NewEra\\\\Proyectos\\\\ProyectosPersonales\\\\ClearTool\\\\src-tauri\" && grep -r \"ProcessRefreshKind\\\\|refresh_processes_specifics\" ~/.cargo/registry/src -l 2>/dev/null | grep sysinfo | head -5)",
+      "Read(//c/Users/joels/.cargo/registry/src/**)",
+      "Bash(xargs grep -l \"ProcessRefreshKind\")",
+      "Bash(xargs grep -l \"create_restore_point\")",
+      "Bash(git add *)"
     ],
     "additionalDirectories": [
       "z:\\NewEra\\Proyectos\\ProyectosPersonales\\ClearTool\\.claude\\specs\\v2\\04-modules"

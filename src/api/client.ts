@@ -15,20 +15,25 @@ import type {
   CleanPlan,
   CleanReport,
   CleanReportV2,
+  CleanResidualsReport,
   CreateRestorePointInput,
   DetectedPackage,
   DirectorySize,
   ExecutePlanOpts,
+  InstalledApp,
   LockingProcess,
+  PendingRename,
   ProcessInfo,
   RegistryTweak,
   ReleaseReport,
   RemoveBloatwareInput,
   RemoveReport,
+  ResidualHints,
   RestorePoint,
   RestoreReport,
   ScanTreeHandle,
   ScanTreeInput,
+  SelectedResiduals,
   StartupEntry,
   TreemapNode,
   TreeNode,
@@ -37,6 +42,8 @@ import type {
   SystemSummary,
   TelemetrySnapshot,
   TweakState,
+  UninstallCompleteReport,
+  UninstallReport,
   VerifyReport,
 } from "./types";
 
@@ -72,29 +79,78 @@ async function initInvoke(): Promise<void> {
           gpu_usage: 10,
           processes_count: 120,
         },
-        scan_tree: { handle: "mock-handle", root: null, total_nodes: 0, scanned_nodes: 0 },
+        scan_tree: {
+          handle: "mock-handle",
+          root: null,
+          total_nodes: 0,
+          scanned_nodes: 0,
+        },
         list_dir: [],
         cancel_scan: undefined,
-        compute_directory_size: { path: "", size_bytes: 0, file_count: 0 },
+        compute_directory_size: {
+          path: "",
+          size_bytes: 0,
+          file_count: 0,
+        },
         list_cache_locations: [],
         scan_cache_locations: [],
-        clean_cache_locations: { cleaned: 0, errors: 0, total_bytes: 0 },
-        analyze_cache_locations: { planId: "", generatedAt: "", ready: [], blocked: [], permissionIssues: [], skipped: [], totalEstimatedBytes: 0, totalBlockedBytes: 0 },
-        execute_clean_plan: { planId: "", runId: "", startedAt: "", finishedAt: "", restorePointSeq: null, perLocation: [], totalBytesFreed: 0, totalBytesScheduledReboot: 0, totalBytesFailed: 0, closedProcesses: [] },
-        verify_clean: { planId: "", verifiedAt: "", perLocation: [], totalActuallyFreed: 0, totalStillPresent: 0 },
+        clean_cache_locations: {
+          cleaned: 0,
+          errors: 0,
+          total_bytes: 0,
+        },
+        analyze_cache_locations: {
+          planId: "",
+          generatedAt: "",
+          ready: [],
+          blocked: [],
+          permissionIssues: [],
+          skipped: [],
+          totalEstimatedBytes: 0,
+          totalBlockedBytes: 0,
+        },
+        execute_clean_plan: {
+          planId: "",
+          runId: "",
+          startedAt: "",
+          finishedAt: "",
+          restorePointSeq: null,
+          perLocation: [],
+          totalBytesFreed: 0,
+          totalBytesScheduledReboot: 0,
+          totalBytesFailed: 0,
+          closedProcesses: [],
+        },
+        verify_clean: {
+          planId: "",
+          verifiedAt: "",
+          perLocation: [],
+          totalActuallyFreed: 0,
+          totalStillPresent: 0,
+        },
         list_bloatware_catalog: [],
         detect_installed_bloatware: [],
-        remove_bloatware: { removed: 0, errors: 0 },
+        remove_bloatware: {
+          removed: 0,
+          errors: 0,
+        },
         list_services: [],
         set_service_state: undefined,
         apply_service_preset: undefined,
         list_registry_tweaks: [],
-        read_registry_tweak_state: { id: "", applied: false, current_value: null },
+        read_registry_tweak_state: {
+          id: "",
+          applied: false,
+          current_value: null,
+        },
         apply_registry_tweak: undefined,
         apply_registry_tweak_batch: undefined,
         revert_registry_tweak: undefined,
         ensure_restore_enabled: true,
-        create_restore_point: { sequence_number: 0, description: "" },
+        create_restore_point: {
+          sequence_number: 0,
+          description: "",
+        },
         list_restore_points: [],
         restore_to_point: undefined,
         list_audit_log: [],
@@ -111,6 +167,7 @@ async function initInvoke(): Promise<void> {
         settings_file_path: "",
         open_settings_file: undefined,
         relaunch_as_admin: false,
+        app_version: { version: "0.1.0", buildDate: "unknown", gitCommit: null },
         list_processes: [],
         kill_process: undefined,
         kill_process_tree: undefined,
@@ -118,17 +175,36 @@ async function initInvoke(): Promise<void> {
         resume_process: undefined,
         close_gracefully: true,
         who_locks_path: [],
-        release_caches: { closedCount: 0, failedCount: 0, closedProcesses: [] },
+        release_caches: {
+          closedCount: 0,
+          failedCount: 0,
+          closedProcesses: [],
+        },
         list_startup: [],
         disable_startup: undefined,
         enable_startup: undefined,
-        build_treemap_data: { name: "C:\\", path: "C:\\", sizeBytes: 0, kind: "Dir", extension: null, children: [] },
+        build_treemap_data: {
+          name: "C:\\",
+          path: "C:\\",
+          sizeBytes: 0,
+          kind: "Dir",
+          extension: null,
+          children: [],
+        },
         flush_dns: undefined,
         renew_ip: undefined,
         reset_winsock: undefined,
         reset_tcpip: undefined,
         reset_proxy: undefined,
         restore_hosts_file: undefined,
+        list_pending_renames: [],
+        cancel_pending_rename: undefined,
+        clear_all_pending_renames: 0,
+        list_installed_apps: [],
+        compute_residual_hints: { appdataRoaming: [], appdataLocal: [], programdata: [], registryKeys: [], startMenuShortcuts: [], desktopShortcuts: [], scheduledTasks: [], services: [], firewallRules: [] },
+        uninstall_app: { appId: "", displayName: "", dryRun: true, success: false, methodUsed: "", error: null, durationMs: 0 },
+        clean_residuals: { appId: "", dryRun: true, pathsDeleted: [], registryKeysDeleted: [], shortcutsDeleted: [], errors: [] },
+        uninstall_app_complete: { appId: "", displayName: "", dryRun: true, restorePointSeq: null, uninstall: { appId: "", displayName: "", dryRun: true, success: false, methodUsed: "", error: null, durationMs: 0 }, residuals: { appId: "", dryRun: true, pathsDeleted: [], registryKeysDeleted: [], shortcutsDeleted: [], errors: [] }, auditRunId: "" },
       };
 
       cachedInvoke = async <T>(command: string, _args?: Record<string, unknown>): Promise<T> => {
@@ -153,6 +229,7 @@ const invoke: InvokeFn = async (command, args) => {
 export const isElevated = () => invoke<boolean>("is_elevated");
 export const systemSummary = () => invoke<SystemSummary>("system_summary");
 export const relaunchAsAdmin = () => invoke<boolean>("relaunch_as_admin");
+export const appVersion = () => invoke<{ version: string; buildDate: string; gitCommit: string | null }>("app_version");
 
 // ── telemetry (CPU/RAM/GPU/procesos) ─────────────────────────────────────
 export const getTelemetrySnapshot = () =>
@@ -283,3 +360,20 @@ export const resetWinsock = (dryRun: boolean) => invoke<void>("reset_winsock", {
 export const resetTcpip = (dryRun: boolean) => invoke<void>("reset_tcpip", { dryRun });
 export const resetProxy = (dryRun: boolean) => invoke<void>("reset_proxy", { dryRun });
 export const restoreHostsFile = (dryRun: boolean) => invoke<void>("restore_hosts_file", { dryRun });
+
+// ── boot-time cleanup (pending renames) ─────────────────────────────────
+export const listPendingRenames = () => invoke<PendingRename[]>("list_pending_renames");
+export const cancelPendingRename = (source: string) =>
+  invoke<void>("cancel_pending_rename", { source });
+export const clearAllPendingRenames = () => invoke<number>("clear_all_pending_renames");
+
+// ── universal app inventory ──────────────────────────────────────────────
+export const listInstalledApps = () => invoke<InstalledApp[]>("list_installed_apps");
+export const computeResidualHints = (appId: string, app: InstalledApp) =>
+  invoke<ResidualHints>("compute_residual_hints", { appId, app });
+export const uninstallApp = (app: InstalledApp, dryRun: boolean) =>
+  invoke<UninstallReport>("uninstall_app", { app, dryRun });
+export const cleanResiduals = (appId: string, selected: SelectedResiduals, dryRun: boolean) =>
+  invoke<CleanResidualsReport>("clean_residuals", { appId, selected, dryRun });
+export const uninstallAppComplete = (app: InstalledApp, dryRun: boolean) =>
+  invoke<UninstallCompleteReport>("uninstall_app_complete", { app, dryRun });

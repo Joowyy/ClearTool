@@ -10,6 +10,8 @@ pub mod catalog;
 pub mod debloat;
 pub mod disk;
 pub mod explorer;
+pub mod inventory;
+pub mod privacy;
 pub mod registry;
 pub mod restore;
 pub mod services;

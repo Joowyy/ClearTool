@@ -115,7 +115,7 @@ where
     let mut per: Vec<PerTweakResult> = Vec::with_capacity(inputs.len());
     let mut applied = 0;
     let mut failed = 0;
-    let mut skipped = 0;
+    let skipped = 0;
 
     for (i, input) in inputs.iter().enumerate() {
         emit_progress((i + 1) as u32, total, &input.id);

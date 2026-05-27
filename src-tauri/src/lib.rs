@@ -50,10 +50,10 @@ pub fn run() {
             // Inicializar preferencias persistentes.
             crate::core::settings::init();
 
-            // Validar catálogos embebidos al arranque — detecta JSON corrupto
-            // en debug en vez de en el primer click de la UI.
-            domain::catalog::validate_all()
-                .expect("catálogos embebidos inválidos");
+            // Validación de catálogos: se realiza bajo demanda al primer uso
+            // del módulo correspondiente (Debloat, Cache, etc.) en lugar de
+            // aquí. Acelera el arranque; un JSON roto en embed falla en CI, no
+            // en el primer paint del usuario.
 
             use tauri::Manager;
             if let Some(window) = app.get_webview_window("main") {
@@ -73,6 +73,7 @@ pub fn run() {
             ipc::system_info::is_elevated,
             ipc::system_info::system_summary,
             ipc::system_info::relaunch_as_admin,
+            ipc::system_info::app_version,
             // telemetry (monitorización en vivo)
             ipc::telemetry::get_telemetry_snapshot,
             // explorer
@@ -140,6 +141,21 @@ pub fn run() {
             ipc::network::reset_tcpip,
             ipc::network::reset_proxy,
             ipc::network::restore_hosts_file,
+            // diagnostics
+            ipc::diagnostics::export_diagnostic_zip,
+            // boot-time cleanup (pending renames)
+            ipc::boot_cleanup::list_pending_renames,
+            ipc::boot_cleanup::cancel_pending_rename,
+            ipc::boot_cleanup::clear_all_pending_renames,
+            // privacy hardening
+            ipc::privacy::get_privacy_preset_preview,
+            ipc::privacy::apply_privacy_preset,
+            // universal app inventory
+            ipc::inventory::list_installed_apps,
+            ipc::inventory::compute_residual_hints,
+            ipc::inventory::uninstall_app,
+            ipc::inventory::clean_residuals,
+            ipc::inventory::uninstall_app_complete,
         ])
         .run(tauri::generate_context!())
         .expect("error mientras se ejecuta la aplicación");

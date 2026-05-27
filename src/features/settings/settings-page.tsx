@@ -6,20 +6,29 @@ import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
 import { Badge } from "../../components/ui/badge";
 import { Input } from "../../components/ui/input";
-import { Moon, Sun, RotateCcw, FolderOpen, AlertTriangle, Save, RefreshCw, Palette, LayoutGrid, Columns2 } from "lucide-react";
+import { Moon, Sun, RotateCcw, FolderOpen, AlertTriangle, Save, RefreshCw, Palette, LayoutGrid, Columns2, FileArchive, Monitor } from "lucide-react";
 import {
   getSettings,
   updateSettings,
   resetSettingsToDefaults,
   settingsFilePath,
   openSettingsFile,
+  appVersion,
+  flushDns,
+  renewIp,
+  resetWinsock,
+  resetTcpip,
+  resetProxy,
+  restoreHostsFile,
   type Settings,
 } from "../../api";
 import { formatError } from "../../lib/errors";
 import { cn } from "../../lib/utils";
+import { invoke } from "@tauri-apps/api/core";
+import { toast } from "../../lib/toast";
 
 export function SettingsPage() {
-  const { theme, setTheme, density, setDensity, sidebarCollapsed, toggleSidebar } = useAppStore();
+  const { theme, setTheme, followSystem, setFollowSystem, density, setDensity, sidebarCollapsed, toggleSidebar } = useAppStore();
   const qc = useQueryClient();
   const [localSettings, setLocalSettings] = useState<Settings | null>(null);
 
@@ -31,6 +40,11 @@ export function SettingsPage() {
   } = useQuery({
     queryKey: ["settings"],
     queryFn: getSettings,
+  });
+
+  const { data: versionInfo } = useQuery({
+    queryKey: ["app-version"],
+    queryFn: appVersion,
   });
 
   const updateMutation = useMutation({
@@ -164,6 +178,18 @@ export function SettingsPage() {
               >
                 <Sun className="h-5 w-5" />
                 <span className="text-xs font-medium">Claro</span>
+              </button>
+              <button
+                onClick={() => setFollowSystem(!followSystem)}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-colors duration-120 min-w-[90px]",
+                  followSystem
+                    ? "border-signal-cyan/40 bg-signal-cyan/10 text-signal-cyan"
+                    : "border-edge-default/10 text-ink-secondary hover:text-ink-primary hover:bg-surface-2",
+                )}
+              >
+                <Monitor className="h-5 w-5" />
+                <span className="text-xs font-medium">Sistema</span>
               </button>
             </div>
           </div>
@@ -344,6 +370,43 @@ export function SettingsPage() {
               </div>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  const path = await invoke<string>("export_diagnostic_zip");
+                  toast.success("Reporte generado", { description: path });
+                } catch (e) {
+                  toast.error("Error generando reporte", e);
+                }
+              }}
+            >
+              <FileArchive className="h-4 w-4 mr-1" />
+              Exportar reporte de diagnóstico
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Herramientas de red */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Herramientas de red</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Operaciones de reparación de red. Crean restore point antes de ejecutar.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-2">
+            <NetworkToolButton label="Limpiar caché DNS" command={flushDns} />
+            <NetworkToolButton label="Renovar IP" command={renewIp} />
+            <NetworkToolButton label="Reset Winsock" command={resetWinsock} />
+            <NetworkToolButton label="Reset TCP/IP" command={resetTcpip} />
+            <NetworkToolButton label="Reset proxy" command={resetProxy} />
+            <NetworkToolButton label="Restaurar hosts" command={restoreHostsFile} destructive />
+          </div>
         </CardContent>
       </Card>
 
@@ -355,8 +418,16 @@ export function SettingsPage() {
         <CardContent className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Versión</span>
-            <Badge variant="secondary">0.5.0</Badge>
+            <Badge variant="secondary">
+              {versionInfo?.version ?? "0.5.0"}
+            </Badge>
           </div>
+          {versionInfo?.buildDate && versionInfo.buildDate !== "unknown" && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Build</span>
+              <span className="font-mono text-xs">{versionInfo.buildDate}{versionInfo.gitCommit ? ` (${versionInfo.gitCommit})` : ""}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Stack</span>
             <span className="font-mono text-xs">Tauri 2.x + Rust + React + TypeScript</span>
@@ -394,5 +465,64 @@ export function SettingsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function NetworkToolButton({ label, command, destructive }: { label: string; command: (dryRun: boolean) => Promise<void>; destructive?: boolean }) {
+  const [state, setState] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const handleClick = async () => {
+    if (destructive) {
+      setConfirmOpen(true);
+      return;
+    }
+    await execute(false);
+  };
+
+  const execute = async (dryRun: boolean) => {
+    setState("running");
+    try {
+      await command(dryRun);
+      setState("done");
+      if (dryRun) {
+        toast.success("Simulación completada", { description: label });
+      } else {
+        toast.success(label, { description: "Operación completada" });
+      }
+      setTimeout(() => setState("idle"), 3000);
+    } catch (e) {
+      setState("error");
+      toast.error(label, { description: formatError(e) });
+      setTimeout(() => setState("idle"), 5000);
+    }
+  };
+
+  return (
+    <>
+      <Button
+        variant={state === "error" ? "destructive" : state === "done" ? "default" : "outline"}
+        size="sm"
+        onClick={handleClick}
+        disabled={state === "running"}
+        className="w-full justify-start text-xs"
+      >
+        {state === "running" ? "Ejecutando..." : state === "done" ? "Completado" : state === "error" ? "Error" : label}
+      </Button>
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-surface-1 border border-edge-default rounded-lg p-6 max-w-sm mx-4">
+            <h3 className="text-lg font-semibold mb-2">Confirmar operación</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              ¿Estás seguro de que quieres ejecutar "{label}"? Esta acción modificará la configuración de red del sistema.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)}>Cancelar</Button>
+              <Button variant="destructive" size="sm" onClick={() => { setConfirmOpen(false); execute(false); }}>Ejecutar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

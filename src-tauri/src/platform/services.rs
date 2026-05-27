@@ -287,6 +287,18 @@ mod windows_impl {
         }
     }
 
+    pub fn get_start_type_str(name: &str) -> Option<String> {
+        list_all().ok().and_then(|services| {
+            services.into_iter().find(|s| s.name.eq_ignore_ascii_case(name)).map(|s| s.start_type)
+        })
+    }
+
+    pub fn get_state_str(name: &str) -> Option<String> {
+        list_all().ok().and_then(|services| {
+            services.into_iter().find(|s| s.name.eq_ignore_ascii_case(name)).map(|s| s.state)
+        })
+    }
+
     pub fn dependencies_of(name: &str) -> AppResult<Vec<String>> {
         unsafe {
             let scm = OpenSCManagerW(PCWSTR::null(), PCWSTR::null(), SC_MANAGER_CONNECT)
@@ -382,4 +394,14 @@ pub fn dependencies_of(_name: &str) -> AppResult<Vec<String>> {
     Err(AppError::External(
         "Gestión de servicios Windows no disponible en esta plataforma".to_string(),
     ))
+}
+
+#[cfg(not(windows))]
+pub fn get_start_type_str(_name: &str) -> Option<String> {
+    None
+}
+
+#[cfg(not(windows))]
+pub fn get_state_str(_name: &str) -> Option<String> {
+    None
 }

@@ -6,7 +6,8 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../lib/routes";
-import { openCommandPalette } from "../components/command-palette";
+import { toggleCommandPalette } from "../components/command-palette";
+import { useAppStore } from "../lib/store";
 
 type ShortcutDef = {
   key: string;
@@ -16,13 +17,14 @@ type ShortcutDef = {
   handler: () => void;
 };
 
-const SHORTCUTS: (navigate: ReturnType<typeof useNavigate>) => ShortcutDef[] = (
+const SHORTCUTS: (navigate: ReturnType<typeof useNavigate>, toggleShortcutsModal: () => void) => ShortcutDef[] = (
   navigate,
+  toggleShortcutsModal,
 ) => [
   {
     key: "k",
     ctrl: true,
-    handler: () => openCommandPalette(),
+    handler: () => toggleCommandPalette(),
   },
   {
     key: ",",
@@ -47,17 +49,16 @@ const SHORTCUTS: (navigate: ReturnType<typeof useNavigate>) => ShortcutDef[] = (
   {
     key: "/",
     ctrl: true,
-    handler: () => {
-      /* TODO: open shortcuts modal */
-    },
+    handler: () => toggleShortcutsModal(),
   },
 ];
 
 export function useKeyboardShortcuts() {
   const navigate = useNavigate();
+  const toggleShortcutsModal = useAppStore((s) => s.toggleShortcutsModal);
 
   useEffect(() => {
-    const shortcuts = SHORTCUTS(navigate);
+    const shortcuts = SHORTCUTS(navigate, toggleShortcutsModal);
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 

@@ -8,8 +8,9 @@ use crate::domain::audit::write_entry;
 use crate::domain::restore;
 use crate::models::restore::{AuditEntry, ReverseRecipe};
 use crate::platform::powershell;
+use std::path::PathBuf;
 
-fn run_network_op(script: &str, action: &str, dry_run: bool) -> AppResult<()> {
+fn run_network_op(script: &str, action: &str, items_affected: Vec<String>, dry_run: bool) -> AppResult<()> {
     if dry_run {
         return Ok(());
     }
@@ -33,7 +34,7 @@ fn run_network_op(script: &str, action: &str, dry_run: bool) -> AppResult<()> {
         operation: action.to_string(),
         dry_run: false,
         restore_point_seq: None,
-        items_affected: vec![script.to_string()],
+        items_affected,
         reverse_recipe: ReverseRecipe::Noop {
             reason: format!("Network operation {} — manual revert may be needed", action),
         },
@@ -47,27 +48,27 @@ fn run_network_op(script: &str, action: &str, dry_run: bool) -> AppResult<()> {
 
 #[tauri::command]
 pub async fn flush_dns(dry_run: bool) -> AppResult<()> {
-    run_network_op("ipconfig /flushdns", "flush_dns", dry_run)
+    run_network_op("ipconfig /flushdns", "flush_dns", vec!["DNS resolver cache".into()], dry_run)
 }
 
 #[tauri::command]
 pub async fn renew_ip(dry_run: bool) -> AppResult<()> {
-    run_network_op("ipconfig /release; ipconfig /renew", "renew_ip", dry_run)
+    run_network_op("ipconfig /release; ipconfig /renew", "renew_ip", vec!["IP configuration".into()], dry_run)
 }
 
 #[tauri::command]
 pub async fn reset_winsock(dry_run: bool) -> AppResult<()> {
-    run_network_op("netsh winsock reset", "reset_winsock", dry_run)
+    run_network_op("netsh winsock reset", "reset_winsock", vec!["Winsock catalog".into()], dry_run)
 }
 
 #[tauri::command]
 pub async fn reset_tcpip(dry_run: bool) -> AppResult<()> {
-    run_network_op("netsh int ip reset", "reset_tcpip", dry_run)
+    run_network_op("netsh int ip reset", "reset_tcpip", vec!["TCP/IP stack".into()], dry_run)
 }
 
 #[tauri::command]
 pub async fn reset_proxy(dry_run: bool) -> AppResult<()> {
-    run_network_op("netsh winhttp reset proxy", "reset_proxy", dry_run)
+    run_network_op("netsh winhttp reset proxy", "reset_proxy", vec!["WinHTTP proxy settings".into()], dry_run)
 }
 
 #[tauri::command]
@@ -79,9 +80,16 @@ pub async fn restore_hosts_file(dry_run: bool) -> AppResult<()> {
     restore::create_restore_point("Before: Restore hosts file")?;
 
     let hosts_path = r"C:\Windows\System32\drivers\etc\hosts";
+
     let script = format!(
         r#"
         $path = "{}"
+        $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+        $backupDir = [System.IO.Path]::GetTempPath()
+        $backupPath = Join-Path $backupDir "cleartool-hosts-backup-$timestamp.txt"
+        Copy-Item -Path $path -Destination $backupPath -Force
+        Write-Output "BACKUP:$backupPath"
+
         $defaultContent = @"
 # Copyright (c) 1993-2009 Microsoft Corp.
 #
@@ -105,6 +113,16 @@ pub async fn restore_hosts_file(dry_run: bool) -> AppResult<()> {
         )));
     }
 
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let backup_path = stdout
+        .lines()
+        .find(|l| l.starts_with("BACKUP:"))
+        .map(|l| l.trim_start_matches("BACKUP:"))
+        .unwrap_or("unknown");
+
+    let backup_path_buf = PathBuf::from(backup_path);
+    let hosts_path_buf = PathBuf::from(hosts_path);
+
     let entry = AuditEntry {
         run_id: uuid::Uuid::new_v4().to_string(),
         timestamp: chrono::Utc::now().to_rfc3339(),
@@ -112,14 +130,20 @@ pub async fn restore_hosts_file(dry_run: bool) -> AppResult<()> {
         operation: "restore_hosts_file".to_string(),
         dry_run: false,
         restore_point_seq: None,
-        items_affected: vec![hosts_path.to_string()],
+        items_affected: vec![
+            hosts_path.to_string(),
+            format!("Backup: {}", backup_path),
+        ],
         reverse_recipe: ReverseRecipe::Noop {
-            reason: format!("Restored {} to defaults — manual edit if needed", hosts_path),
+            reason: format!("Restored {} to defaults — backup at {}", hosts_path, backup_path),
         },
         status: "success".to_string(),
         error: None,
     };
     let _ = write_entry(&entry);
+
+    let _ = backup_path_buf;
+    let _ = hosts_path_buf;
 
     Ok(())
 }

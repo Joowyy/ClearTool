@@ -60,8 +60,9 @@ pub fn disable_startup(id: &str) -> AppResult<()> {
         false,
         None,
         vec![id.to_string()],
-        ReverseRecipe::Noop {
-            reason: "Reactivar manualmente desde Arranque".into(),
+        ReverseRecipe::StartupToggle {
+            origin: entry.origin.clone(),
+            previous_enabled: true,
         },
         "success",
         None,
@@ -73,12 +74,12 @@ pub fn disable_startup(id: &str) -> AppResult<()> {
 
 pub fn enable_startup(id: &str) -> AppResult<()> {
     let entries = list_all()?;
-    let _entry = entries
+    let entry = entries
         .iter()
         .find(|e| e.id == id)
         .ok_or_else(|| AppError::Validation(format!("startup entry no encontrada: {}", id)))?;
 
-    match &entries.iter().find(|e| e.id == id).unwrap().origin {
+    match &entry.origin {
         StartupOrigin::Registry { hive, key, name } => {
             enable_registry_entry(hive, key, name)?;
         }
@@ -104,8 +105,9 @@ pub fn enable_startup(id: &str) -> AppResult<()> {
         false,
         None,
         vec![id.to_string()],
-        ReverseRecipe::Noop {
-            reason: "Deshabilitar manualmente desde Arranque".into(),
+        ReverseRecipe::StartupToggle {
+            origin: entry.origin.clone(),
+            previous_enabled: false,
         },
         "success",
         None,
@@ -175,12 +177,12 @@ fn enable_registry_entry(hive: &str, _key: &str, name: &str) -> AppResult<()> {
 
 #[cfg(not(windows))]
 fn disable_registry_entry(_hive: &str, _key: &str, _name: &str) -> AppResult<()> {
-    Err(AppError::NotImplemented("Windows only".into()))
+    Err(AppError::Validation("Windows only".into()))
 }
 
 #[cfg(not(windows))]
 fn enable_registry_entry(_hive: &str, _key: &str, _name: &str) -> AppResult<()> {
-    Err(AppError::NotImplemented("Windows only".into()))
+    Err(AppError::Validation("Windows only".into()))
 }
 
 fn disable_lnk_entry(path: &std::path::Path) -> AppResult<()> {

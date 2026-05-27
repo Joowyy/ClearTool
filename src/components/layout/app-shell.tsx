@@ -14,6 +14,8 @@ import { ConfirmProvider } from "../ui/confirm-dialog";
 import { useElevation } from "../../hooks/use-elevation";
 import { useKeyboardShortcuts } from "../../hooks/use-keyboard-shortcuts";
 import { DebugConsole } from "../debug/debug-console";
+import { useThemeEffect } from "../../lib/theme";
+import { ShortcutsModal } from "../shortcuts-modal";
 
 function KeyboardShortcutsHandler() {
   useKeyboardShortcuts();
@@ -22,6 +24,7 @@ function KeyboardShortcutsHandler() {
 
 export function AppShell() {
   useElevation();
+  useThemeEffect();
 
   return (
     <ConfirmProvider>
@@ -36,6 +39,7 @@ export function AppShell() {
         </div>
         <CommandPalette />
         <DebugConsole />
+        <ShortcutsModal />
         <Toaster
           theme="system"
           position="bottom-right"

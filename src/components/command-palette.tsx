@@ -150,10 +150,10 @@ function usePaletteActions() {
   ] as PaletteAction[];
 }
 
-let globalOpen: (() => void) | null = null;
+let globalToggle: (() => void) | null = null;
 
-export function openCommandPalette() {
-  globalOpen?.();
+export function toggleCommandPalette() {
+  globalToggle?.();
 }
 
 export function CommandPalette() {
@@ -161,21 +161,10 @@ export function CommandPalette() {
   const actions = usePaletteActions();
 
   useEffect(() => {
-    globalOpen = () => setOpen(true);
+    globalToggle = () => setOpen((o) => !o);
     return () => {
-      globalOpen = null;
+      globalToggle = null;
     };
-  }, []);
-
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((o) => !o);
-      }
-    };
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
   }, []);
 
   return (

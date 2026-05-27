@@ -512,6 +512,102 @@ export interface VerifyLocationResult {
   successPercent: number;
 }
 
+// ── Universal App Inventory ──────────────────────────────────────────────
+
+export type AppxKind = "user" | "provisioned" | "framework" | "bundle";
+
+export type AppSource =
+  | { kind: "appxPackage"; fullName: string; familyName: string; appxKind: AppxKind }
+  | { kind: "appxProvisioned"; fullName: string }
+  | { kind: "win32Uninstaller"; registryKey: string; hive: string }
+  | { kind: "steam"; appId: number; libraryPath: string }
+  | { kind: "epicGames"; catalogItemId: string; manifestPath: string }
+  | { kind: "gog"; gameId: number }
+  | { kind: "xbox"; packageFamilyName: string; msstoreId: string | null }
+  | { kind: "winget"; id: string };
+
+export type UninstallMethod =
+  | { kind: "appxRemove" }
+  | { kind: "appxProvisionedRemove" }
+  | { kind: "uninstallString"; exe: string; args: string[]; requiresAdmin: boolean }
+  | { kind: "quietUninstallString"; exe: string; args: string[]; requiresAdmin: boolean }
+  | { kind: "msiUninstall"; productCode: string }
+  | { kind: "steamUninstall"; appId: number }
+  | { kind: "epicUninstall"; catalogItemId: string }
+  | { kind: "gogUninstall"; exe: string }
+  | { kind: "noUninstaller" };
+
+export interface CatalogMatch {
+  catalogId: string;
+  requiresDisclaimer: boolean;
+  risk: string;
+  category: string;
+}
+
+export interface ResidualHints {
+  appdataRoaming: string[];
+  appdataLocal: string[];
+  programdata: string[];
+  registryKeys: [string, string][];
+  startMenuShortcuts: string[];
+  desktopShortcuts: string[];
+  scheduledTasks: string[];
+  services: string[];
+  firewallRules: string[];
+}
+
+export interface InstalledApp {
+  id: string;
+  displayName: string;
+  publisher: string | null;
+  version: string | null;
+  source: AppSource;
+  installLocation: string | null;
+  installDate: string | null;
+  sizeBytes: number | null;
+  uninstallMethod: UninstallMethod;
+  isSystemCritical: boolean;
+  catalogMatch: CatalogMatch | null;
+  residualHints: ResidualHints;
+}
+
+export interface UninstallReport {
+  appId: string;
+  displayName: string;
+  dryRun: boolean;
+  success: boolean;
+  methodUsed: string;
+  error: string | null;
+  durationMs: number;
+}
+
+export interface CleanResidualsReport {
+  appId: string;
+  dryRun: boolean;
+  pathsDeleted: string[];
+  registryKeysDeleted: [string, string][];
+  shortcutsDeleted: string[];
+  errors: string[];
+}
+
+export interface UninstallCompleteReport {
+  appId: string;
+  displayName: string;
+  dryRun: boolean;
+  restorePointSeq: number | null;
+  uninstall: UninstallReport;
+  residuals: CleanResidualsReport;
+  auditRunId: string;
+}
+
+export interface SelectedResiduals {
+  appdataRoaming: string[];
+  appdataLocal: string[];
+  programdata: string[];
+  registryKeys: [string, string][];
+  shortcuts: string[];
+}
+
 // ── Startup Manager ────────────────────────────────────────────────────
 
 export type StartupImpact = "unknown" | "low" | "medium" | "high";

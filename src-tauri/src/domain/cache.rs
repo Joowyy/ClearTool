@@ -299,14 +299,21 @@ pub fn file_passes_filters(path: &Path, metadata: &std::fs::Metadata, filters: &
 }
 
 fn glob_match(pattern: &str, text: &str) -> bool {
-    if pattern == "*" {
-        return true;
+    match glob::Pattern::new(pattern) {
+        Ok(p) => p.matches(text),
+        Err(_) => text == pattern,
     }
-    if pattern.starts_with("*.") {
-        let suffix = &pattern[1..];
-        return text.ends_with(suffix);
+}
+
+#[cfg(test)]
+mod glob_tests {
+    use super::glob_match;
+
+    #[test]
+    fn glob_matches_double_star() {
+        assert!(glob_match("**/*.tmp", "foo/bar/baz.tmp"));
+        assert!(!glob_match("**/*.tmp", "foo/bar/baz.log"));
     }
-    text == pattern
 }
 
 fn format_bytes(bytes: u64) -> String {
@@ -940,6 +947,3 @@ fn path_under(child: &str, parent: &str) -> bool {
     let p = parent.to_lowercase().replace('/', "\\");
     c.starts_with(&p)
 }
-
-// ── VerifyReport (añadido a models/cache.rs) ──
-// Se define aquí temporalmente hasta que se mueva al modelo.

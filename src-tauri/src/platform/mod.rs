@@ -4,6 +4,7 @@ pub mod debloat;
 pub mod elevation;
 pub mod filesystem;
 pub mod gpu;
+pub mod inventory;
 pub mod pending_rename;
 pub mod powershell;
 pub mod processes;
