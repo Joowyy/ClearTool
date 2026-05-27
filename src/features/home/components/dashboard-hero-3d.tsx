@@ -1,9 +1,9 @@
 // @ts-nocheck — R3F v8 intrinsic elements (<mesh>, <pointLight>, etc.) no se
 // augmentan correctamente en JSX namespace con React 19. Eliminar cuando
 // R3F v9 estable salga.
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float, MeshDistortMaterial } from "@react-three/drei";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import type { Mesh, Color } from "three";
 import * as THREE from "three";
 
@@ -14,6 +14,8 @@ interface DashboardHero3DProps {
 
 function HeroTorus({ loadPercent }: { loadPercent: number }) {
   const meshRef = useRef<Mesh>(null);
+  const { invalidate } = useThree();
+
   const color = useMemo<Color>(() => {
     // verde (cyan) → ámbar → rojo según carga
     const t = Math.min(1, loadPercent / 100);
@@ -27,6 +29,8 @@ function HeroTorus({ loadPercent }: { loadPercent: number }) {
     if (meshRef.current) {
       meshRef.current.rotation.y += delta * 0.25;
       meshRef.current.rotation.x += delta * 0.05;
+      // Pedir el siguiente frame para mantener la animación en frameloop="demand".
+      invalidate();
     }
   });
 
@@ -46,13 +50,61 @@ function HeroTorus({ loadPercent }: { loadPercent: number }) {
   );
 }
 
+function FallbackDashboard({ loadPercent }: { loadPercent: number }) {
+  return (
+    <div className="relative w-full h-[260px] flex flex-col items-center justify-center">
+      <span className="text-5xl font-bold tabular-nums tracking-tight">
+        {loadPercent.toFixed(0)}%
+      </span>
+      <span className="text-xs text-muted-foreground uppercase tracking-widest mt-1">
+        carga global
+      </span>
+    </div>
+  );
+}
+
 export function DashboardHero3D({ loadPercent }: DashboardHero3DProps) {
+  const [webglOk, setWebglOk] = useState(true);
+
+  useEffect(() => {
+    try {
+      const c = document.createElement("canvas");
+      const gl = c.getContext("webgl2") ?? c.getContext("webgl");
+      setWebglOk(!!gl);
+    } catch {
+      setWebglOk(false);
+    }
+  }, []);
+
+  if (!webglOk) {
+    return <FallbackDashboard loadPercent={loadPercent} />;
+  }
+
   return (
     <div className="relative w-full h-[260px]">
       <Canvas
+        frameloop="demand"
         camera={{ position: [0, 0, 3.6], fov: 50 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: true }}
+        dpr={[1, 1.5]}
+        gl={{
+          antialias: false,
+          alpha: true,
+          powerPreference: "low-power",
+          preserveDrawingBuffer: false,
+        }}
+        onCreated={(state) => {
+          // Arrancar el primer frame para que la animación empiece.
+          state.invalidate();
+
+          state.gl.domElement.addEventListener("webglcontextlost", (e: Event) => {
+            e.preventDefault();
+            console.warn("[DashboardHero3D] WebGL context lost — pausando render.");
+          });
+          state.gl.domElement.addEventListener("webglcontextrestored", () => {
+            console.info("[DashboardHero3D] WebGL context restored — reanudando.");
+            state.invalidate();
+          });
+        }}
       >
         <ambientLight intensity={0.45} />
         <pointLight position={[5, 5, 5]} intensity={1.4} color="#8aa8ff" />

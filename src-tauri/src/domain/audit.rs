@@ -92,17 +92,9 @@ pub fn find_entry(run_id: &str) -> AppResult<Option<AuditEntry>> {
     Ok(list_log()?.into_iter().find(|e| e.run_id == run_id))
 }
 
-pub fn revert_entry(run_id: &str) -> AppResult<()> {
-    let entry = find_entry(run_id)?
-        .ok_or_else(|| AppError::Audit(format!("entry {} not found", run_id)))?;
-
-    if entry.dry_run {
-        return Err(AppError::Audit(
-            "dry-run entry cannot be reverted".into(),
-        ));
-    }
-
-    match &entry.reverse_recipe {
+fn apply_recipe(recipe: &ReverseRecipe) -> AppResult<()> {
+    use crate::models::startup::StartupOrigin;
+    match recipe {
         ReverseRecipe::Registry { operations } => {
             for op in operations {
                 crate::platform::registry::write_value_or_delete(
@@ -137,6 +129,32 @@ pub fn revert_entry(run_id: &str) -> AppResult<()> {
                 let _ = open::that(url);
             }
         }
+        ReverseRecipe::StartupToggle { origin, previous_enabled } => {
+            let id = match origin {
+                StartupOrigin::Registry { name, .. } => name.clone(),
+                StartupOrigin::StartupFolder { lnk_path } => lnk_path.clone(),
+                StartupOrigin::ScheduledTask { task_path } => task_path.clone(),
+                StartupOrigin::Service { service_name } => service_name.clone(),
+                StartupOrigin::UwpAutoStart { package_family_name, .. } => package_family_name.clone(),
+            };
+            if *previous_enabled {
+                crate::domain::startup::enable_startup(&id)?;
+            } else {
+                crate::domain::startup::disable_startup(&id)?;
+            }
+        }
+        ReverseRecipe::Composite { recipes } => {
+            let mut errors: Vec<String> = Vec::new();
+            for sub in recipes.iter().rev() {
+                if let Err(e) = apply_recipe(sub) {
+                    log::warn!("composite revert sub-error: {}", e);
+                    errors.push(e.to_string());
+                }
+            }
+            if !errors.is_empty() {
+                log::warn!("composite revert completado con {} errores", errors.len());
+            }
+        }
         ReverseRecipe::Noop { reason } => {
             return Err(AppError::Audit(format!(
                 "entry no reversible: {}",
@@ -144,6 +162,20 @@ pub fn revert_entry(run_id: &str) -> AppResult<()> {
             )));
         }
     }
+    Ok(())
+}
+
+pub fn revert_entry(run_id: &str) -> AppResult<()> {
+    let entry = find_entry(run_id)?
+        .ok_or_else(|| AppError::Audit(format!("entry {} not found", run_id)))?;
+
+    if entry.dry_run {
+        return Err(AppError::Audit(
+            "dry-run entry cannot be reverted".into(),
+        ));
+    }
+
+    apply_recipe(&entry.reverse_recipe)?;
 
     // Loggear el revert como nueva entry
     let revert_entry = make_entry(

@@ -6,11 +6,19 @@
 
 pub mod audit;
 pub mod cache;
+pub mod cache_background;
+pub mod cache_cancellation;
+pub mod cache_ignore;
 pub mod catalog;
 pub mod debloat;
+pub mod disk;
 pub mod explorer;
+pub mod inventory;
+pub mod privacy;
 pub mod registry;
 pub mod restore;
 pub mod services;
+pub mod startup;
 pub mod system_info;
 pub mod telemetry;
+pub mod throughput_stats;

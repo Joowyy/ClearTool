@@ -72,15 +72,13 @@ pub fn run_script_owned(script: &str) -> AppResult<Output> {
     }
 }
 
-#[allow(dead_code)]
-pub fn run_script_with_timeout(script: &'static str, timeout: Duration) -> AppResult<Output> {
-    let output = run_script(script)?;
-
-    if output.status.success() {
-        Ok(output)
-    } else {
-        Err(AppError::Powershell(
-            String::from_utf8_lossy(&output.stderr).to_string()
-        ))
-    }
+pub async fn run_script_with_timeout(script: &'static str, timeout: Duration) -> AppResult<Output> {
+    let secs = timeout.as_secs();
+    tokio::time::timeout(
+        timeout,
+        tokio::task::spawn_blocking(move || run_script(script)),
+    )
+    .await
+    .map_err(|_| AppError::Powershell(format!("timeout {}s", secs)))?
+    .map_err(|e| AppError::External(e.to_string()))?
 }

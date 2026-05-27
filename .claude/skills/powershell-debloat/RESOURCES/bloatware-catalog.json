@@ -1,7 +1,7 @@
 {
   "$schema": "./bloatware-catalog.schema.json",
-  "version": "0.1.0",
-  "updatedAt": "2026-05-09",
+  "version": "0.2.0",
+  "updatedAt": "2026-05-27",
   "entries": [
     {
       "id": "microsoft.bingnews",
@@ -199,6 +199,1344 @@
       "reversal": {"method": "registry", "details": "TaskbarDa=1"},
       "windowsBuilds": [">=22000"],
       "requiresElevation": false
+    },
+    {
+      "id": "microsoft.solitaire",
+      "displayName": "Microsoft Solitaire Collection",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.MicrosoftSolitaireCollection"],
+      "risk": "low",
+      "consequences": ["Se elimina el juego de cartas preinstalado."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Microsoft Solitaire Collection'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.gethelp",
+      "displayName": "Get Help",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.GetHelp"],
+      "risk": "low",
+      "consequences": ["Se elimina la app de ayuda integrada de Windows."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Get Help'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.getstarted",
+      "displayName": "Tips / Get Started",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.Getstarted"],
+      "risk": "low",
+      "consequences": ["Desaparece la app de sugerencias y tutorial de Windows."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Tips'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.feedbackhub",
+      "displayName": "Feedback Hub",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.WindowsFeedbackHub"],
+      "risk": "low",
+      "consequences": ["No se podrá enviar feedback a Microsoft desde Windows."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Feedback Hub'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.stickynotes",
+      "displayName": "Sticky Notes",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.MicrosoftStickyNotes"],
+      "risk": "low",
+      "consequences": ["Se eliminan las notas adhesivas; notas no sincronizadas se pierden."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Microsoft Sticky Notes'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.mixedreality",
+      "displayName": "Mixed Reality Portal",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.MixedReality.Portal"],
+      "risk": "low",
+      "consequences": ["No afecta si no se usa Windows Mixed Reality."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Mixed Reality Portal'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.people",
+      "displayName": "Microsoft People",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.People"],
+      "risk": "low",
+      "consequences": ["Se elimina la app de contactos integrada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Microsoft People'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.windowsalarms",
+      "displayName": "Windows Alarms & Clock",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.WindowsAlarms"],
+      "risk": "low",
+      "consequences": ["Se elimina la app de alarmas y reloj."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Windows Alarms & Clock'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.windowscamera",
+      "displayName": "Windows Camera",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.WindowsCamera"],
+      "risk": "low",
+      "consequences": ["Se elimina la app de cámara; otras apps que usen la webcam siguen funcionando."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Windows Camera'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.windowscommunicationsapps",
+      "displayName": "Mail and Calendar",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["microsoft.windowscommunicationsapps"],
+      "risk": "medium",
+      "consequences": ["Se eliminan las apps de correo y calendario de Windows."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Mail and Calendar'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.windowsmaps",
+      "displayName": "Windows Maps",
+      "category": "maps",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.WindowsMaps"],
+      "risk": "low",
+      "consequences": ["Se elimina la app de mapas; apps de terceros no se ven afectadas."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Windows Maps'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.yourphone",
+      "displayName": "Phone Link",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.YourPhone"],
+      "risk": "low",
+      "consequences": ["Se pierde la integración con Android/iOS desde Windows."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Phone Link'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.zunemusic",
+      "displayName": "Groove Music",
+      "category": "media",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.ZuneMusic"],
+      "risk": "low",
+      "consequences": ["Se elimina el reproductor de música integrado."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Groove Music'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.zunevideo",
+      "displayName": "Movies & TV",
+      "category": "media",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.ZuneVideo"],
+      "risk": "low",
+      "consequences": ["Se elimina el reproductor de video integrado."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Movies & TV'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.onenote",
+      "displayName": "OneNote for Windows 10",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.Office.OneNote"],
+      "risk": "low",
+      "consequences": ["Se elimina OneNote UWP; la versión de escritorio de Office no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'OneNote for Windows 10'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.oneconnect",
+      "displayName": "Mobile Plans",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.OneConnect"],
+      "risk": "low",
+      "consequences": ["No afecta si no se usan planes móviles/eSIM."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Mobile Plans'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.skype",
+      "displayName": "Skype",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.SkypeApp"],
+      "risk": "low",
+      "consequences": ["Se elimina Skype UWP; la versión de escritorio no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Skype'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.wallet",
+      "displayName": "Microsoft Wallet",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.Wallet"],
+      "risk": "low",
+      "consequences": ["Se elimina la billetera digital integrada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Microsoft Wallet'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.print3d",
+      "displayName": "Print 3D",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.Print3D"],
+      "risk": "low",
+      "consequences": ["No afecta si no se usa impresión 3D."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Print 3D'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.paint3d",
+      "displayName": "Paint 3D",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.MSPaint"],
+      "risk": "low",
+      "consequences": ["Se elimina Paint 3D; Paint clásico no se ve afectado."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Paint 3D'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.3dviewer",
+      "displayName": "3D Viewer",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.Microsoft3DViewer"],
+      "risk": "low",
+      "consequences": ["No afecta si no se visualizan modelos 3D."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: '3D Viewer'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.soundrecorder",
+      "displayName": "Sound Recorder",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.WindowsSoundRecorder"],
+      "risk": "low",
+      "consequences": ["Se elimina la grabadora de sonido integrada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Sound Recorder'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.whiteboard",
+      "displayName": "Microsoft Whiteboard",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.Whiteboard"],
+      "risk": "low",
+      "consequences": ["Se elimina la pizarra digital; pizarras en Teams/OneDrive no se ven afectadas."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Microsoft Whiteboard'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.todos",
+      "displayName": "Microsoft To Do",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.Todos"],
+      "risk": "low",
+      "consequences": ["Se elimina la app de tareas; datos en la nube no se pierden."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Microsoft To Do'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.devhome",
+      "displayName": "Dev Home",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.Windows.DevHome"],
+      "risk": "low",
+      "consequences": ["Se elimina el dashboard de desarrollo; no afecta herramientas de desarrollo."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Dev Home'."},
+      "windowsBuilds": [">=22621"],
+      "requiresElevation": true
+    },
+    {
+      "id": "microsoft.bingsearch",
+      "displayName": "Bing Search",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.BingSearch"],
+      "risk": "low",
+      "consequences": ["Se elimina la app de búsqueda Bing; no afecta búsqueda en navegador."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Bing Search'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "xbox.xboxapp",
+      "displayName": "Xbox",
+      "category": "xbox",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.XboxApp"],
+      "risk": "low",
+      "consequences": ["Se elimina la consola Xbox Companion; no afecta juegos instalados."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Xbox'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "xbox.xboxgamingoverlay",
+      "displayName": "Xbox Game Bar",
+      "category": "xbox",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.XboxGamingOverlay"],
+      "risk": "low",
+      "consequences": ["Se elimina la Game Bar (Win+G); los juegos siguen funcionando."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Xbox Game Bar'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "xbox.xboxidentityprovider",
+      "displayName": "Xbox Identity Provider",
+      "category": "xbox",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.XboxIdentityProvider"],
+      "risk": "medium",
+      "consequences": ["Puede afectar el login en juegos que usan Xbox Live."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Xbox Identity Provider'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "xbox.xboxspeechtotext",
+      "displayName": "Xbox Speech To Text Overlay",
+      "category": "xbox",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.XboxSpeechToTextOverlay"],
+      "risk": "low",
+      "consequences": ["No afecta si no se usa transcripción de voz en Xbox."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Xbox Speech To Text Overlay'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "xbox.gamingapp",
+      "displayName": "Xbox Gaming App",
+      "category": "xbox",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.GamingApp"],
+      "risk": "low",
+      "consequences": ["Se elimina la app de Xbox Game Pass; juegos instalados no se pierden."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Xbox'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "xbox.gamingservices",
+      "displayName": "Gaming Services",
+      "category": "xbox",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.GamingServices"],
+      "risk": "medium",
+      "consequences": ["Juegos de Microsoft Store y Game Pass pueden no funcionar."],
+      "reversal": {"method": "store-reinstall", "details": "Reinstalable vía PowerShell: 'Get-AppxPackage *GamingServices* | Add-AppxPackage -Register'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "media.clipchamp",
+      "displayName": "Clipchamp",
+      "category": "media",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Clipchamp.Clipchamp"],
+      "risk": "low",
+      "consequences": ["Se elimina el editor de video preinstalado."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Clipchamp'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "media.whatsapp",
+      "displayName": "WhatsApp Desktop",
+      "category": "media",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["WhatsAppDesktop"],
+      "risk": "low",
+      "consequences": ["Se elimina WhatsApp UWP; la versión web y de escritorio standalone no se ven afectadas."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'WhatsApp Desktop'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "media.tiktok",
+      "displayName": "TikTok",
+      "category": "media",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["TikTok.TikTok"],
+      "risk": "low",
+      "consequences": ["Se elimina TikTok UWP; la versión web no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'TikTok'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "media.spotify",
+      "displayName": "Spotify",
+      "category": "media",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["SpotifyAB.SpotifyMusic"],
+      "risk": "low",
+      "consequences": ["Se elimina Spotify UWP; la versión de escritorio no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Spotify'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "ai.powerautomate",
+      "displayName": "Power Automate Desktop",
+      "category": "ai",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.PowerAutomateDesktop"],
+      "risk": "low",
+      "consequences": ["Se elimina la app de automatización RPA."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Power Automate Desktop'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "ai.copilot.system",
+      "displayName": "Windows Copilot (System)",
+      "category": "ai",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Microsoft.Windows.Ai.Copilot.Provider"],
+      "risk": "medium",
+      "consequences": ["Se elimina el proveedor de IA del sistema; puede afectar features de Windows basadas en IA."],
+      "reversal": {"method": "store-reinstall", "details": "Reinstalable como parte de Windows Web Experience Pack."},
+      "windowsBuilds": [">=22621"],
+      "requiresElevation": true
+    },
+    {
+      "id": "ai.bingsearch.ai",
+      "displayName": "Bing Chat / Copilot in Edge",
+      "category": "ai",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "packageNames": [],
+      "registryKeys": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "HubsSidebarEnabled",
+          "type": "DWORD",
+          "value": 0
+        },
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+          "name": "MicrosoftEdgeCopilotEnabled",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Se deshabilita Copilot en Edge; no se elimina el navegador."],
+      "reversal": {"method": "registry", "details": "HubsSidebarEnabled=1, MicrosoftEdgeCopilotEnabled=1"},
+      "windowsBuilds": [">=22621"],
+      "requiresElevation": true
+    },
+    {
+      "id": "telemetry.compatibilitytelemetry",
+      "displayName": "Microsoft Compatibility Telemetry",
+      "category": "telemetry",
+      "removalStrategy": "service-disable",
+      "removalMethod": "service-and-files",
+      "service": {"name": "CompatTelRunner", "displayName": "Microsoft Compatibility Telemetry"},
+      "risk": "low",
+      "consequences": ["Microsoft deja de recopilar datos de compatibilidad de aplicaciones."],
+      "reversal": {"method": "service-restart", "details": "sc config CompatTelRunner start= demand"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "telemetry.powershell.telemetry",
+      "displayName": "PowerShell Telemetry",
+      "category": "telemetry",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\PowerShellCore",
+          "name": "DisableTelemetry",
+          "type": "DWORD",
+          "value": 1
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Se deshabilita la telemetría de PowerShell."],
+      "reversal": {"method": "registry", "details": "DisableTelemetry=0 o eliminar el valor."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "tweak.taskbar.search-box",
+      "displayName": "Caja de búsqueda en barra de tareas",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Search",
+          "name": "SearchboxTaskbarMode",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Se oculta la caja de búsqueda de la barra de tareas."],
+      "reversal": {"method": "registry", "details": "SearchboxTaskbarMode=1 (icono) o 2 (caja completa)."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": false
+    },
+    {
+      "id": "tweak.taskbar.task-view",
+      "displayName": "Botón Task View en barra de tareas",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+          "name": "ShowTaskViewButton",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Se oculta el botón de Task View; Win+Tab sigue funcionando."],
+      "reversal": {"method": "registry", "details": "ShowTaskViewButton=1"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": false
+    },
+    {
+      "id": "tweak.disable-ads-tracking",
+      "displayName": "Desactivar ID de publicidad y seguimiento",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo",
+          "name": "Enabled",
+          "type": "DWORD",
+          "value": 0
+        },
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Privacy",
+          "name": "TailoredExperiencesWithDiagnosticDataEnabled",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Se desactiva el ID de publicidad y experiencias personalizadas."],
+      "reversal": {"method": "registry", "details": "Enabled=1, TailoredExperiencesWithDiagnosticDataEnabled=1"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": false
+    },
+    {
+      "id": "tweak.disable-activity-feed",
+      "displayName": "Desactivar Activity Feed (Timeline)",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+          "name": "EnableActivityFeed",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Se desactiva el historial de actividades y timeline."],
+      "reversal": {"method": "registry", "details": "EnableActivityFeed=1"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.mcafee.security",
+      "displayName": "McAfee LiveSafe / Security",
+      "category": "consumer-app",
+      "removalStrategy": "uninstaller",
+      "removalMethod": "uninstaller-string",
+      "uninstallerIds": ["McAfee LiveSafe", "McAfee Security", "McAfee Total Protection"],
+      "risk": "medium",
+      "consequences": [
+        "Se elimina el antivirus OEM; Windows Defender se activará automáticamente.",
+        "Asegurarse de que Defender está activo antes de remover."
+      ],
+      "reversal": {"method": "manual-installer", "details": "Descargar instalador desde mcafee.com o usar licencia OEM."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.mcafee.campaign",
+      "displayName": "McAfee Campaign / Offers",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["McAfeeInc.McAfeeOffer"],
+      "risk": "low",
+      "consequences": ["Se eliminan las ofertas promocionales de McAfee."],
+      "reversal": {"method": "manual-installer", "details": "No reinstalable; es software promocional OEM."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.norton.security",
+      "displayName": "Norton Security / 360",
+      "category": "consumer-app",
+      "removalStrategy": "uninstaller",
+      "removalMethod": "uninstaller-string",
+      "uninstallerIds": ["Norton Security", "Norton 360", "Norton AntiVirus"],
+      "risk": "medium",
+      "consequences": [
+        "Se elimina el antivirus OEM; Windows Defender se activará automáticamente.",
+        "Asegurarse de que Defender está activo antes de remover."
+      ],
+      "reversal": {"method": "manual-installer", "details": "Descargar instalador desde norton.com."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.dell.supportassist",
+      "displayName": "Dell SupportAssist",
+      "category": "consumer-app",
+      "removalStrategy": "uninstaller",
+      "removalMethod": "uninstaller-string",
+      "uninstallerIds": ["Dell SupportAssist", "SupportAssist"],
+      "risk": "low",
+      "consequences": ["Se elimina la herramienta de soporte Dell; actualizaciones de drivers deberán hacerse manualmente."],
+      "reversal": {"method": "manual-installer", "details": "Descargar desde dell.com/support."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.dell.command",
+      "displayName": "Dell Command | Update",
+      "category": "consumer-app",
+      "removalStrategy": "uninstaller",
+      "removalMethod": "uninstaller-string",
+      "uninstallerIds": ["Dell Command | Update", "DellCommandUpdate"],
+      "risk": "low",
+      "consequences": ["Se elimina el actualizador de drivers Dell."],
+      "reversal": {"method": "manual-installer", "details": "Descargar desde dell.com/support."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.hp.support",
+      "displayName": "HP Support Assistant",
+      "category": "consumer-app",
+      "removalStrategy": "uninstaller",
+      "removalMethod": "uninstaller-string",
+      "uninstallerIds": ["HP Support Assistant", "HPSystemEventUtility"],
+      "risk": "low",
+      "consequences": ["Se elimina la herramienta de soporte HP."],
+      "reversal": {"method": "manual-installer", "details": "Descargar desde hp.com/support."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.lenovo.vantage",
+      "displayName": "Lenovo Vantage",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["E0469639.LenovoCompanion", "E0469639.LenovoUtility"],
+      "risk": "low",
+      "consequences": ["Se elimina la app de gestión Lenovo; actualizaciones de BIOS/drivers deberán hacerse manualmente."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Lenovo Vantage'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.asus.armoury",
+      "displayName": "ASUS Armoury Crate",
+      "category": "consumer-app",
+      "removalStrategy": "uninstaller",
+      "removalMethod": "uninstaller-string",
+      "uninstallerIds": ["Armoury Crate", "ASUS Armoury Crate"],
+      "risk": "medium",
+      "consequences": [
+        "Se elimina el centro de control ASUS; RGB y perfiles de rendimiento deberán configurarse por otros medios.",
+        "Puede requerir la herramienta de desinstalación oficial de ASUS."
+      ],
+      "reversal": {"method": "manual-installer", "details": "Descargar desde asus.com/support."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.amazon.photos",
+      "displayName": "Amazon Photos",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["AmazonPhotos"],
+      "risk": "low",
+      "consequences": ["Se elimina Amazon Photos UWP; la versión web no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Amazon Photos'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.facebook",
+      "displayName": "Facebook",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Facebook.Facebook"],
+      "risk": "low",
+      "consequences": ["Se elimina Facebook UWP; la versión web no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Facebook'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.instagram",
+      "displayName": "Instagram",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Facebook.Instagram"],
+      "risk": "low",
+      "consequences": ["Se elimina Instagram UWP; la versión web no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Instagram'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.netflix",
+      "displayName": "Netflix",
+      "category": "media",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Netflix.Netflix"],
+      "risk": "low",
+      "consequences": ["Se elimina Netflix UWP; la versión web no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Netflix'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.disney",
+      "displayName": "Disney",
+      "category": "media",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Disney.DisneyPlus"],
+      "risk": "low",
+      "consequences": ["Se elimina Disney+ UWP; la versión web no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Disney+'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.pandora",
+      "displayName": "Pandora",
+      "category": "media",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["PandoraMediaInc.Pandora"],
+      "risk": "low",
+      "consequences": ["Se elimina Pandora UWP; la versión web no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Pandora'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.duolingo",
+      "displayName": "Duolingo",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["D5030B23C819.Duolingo"],
+      "risk": "low",
+      "consequences": ["Se elimina Duolingo UWP; la versión web no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Duolingo'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.candy",
+      "displayName": "Candy Crush Friends",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["king.com.CandyCrushFriends"],
+      "risk": "low",
+      "consequences": ["Se elimina el juego Candy Crush preinstalado."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Candy Crush Friends'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.candy.soda",
+      "displayName": "Candy Crush Soda Saga",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["king.com.CandyCrushSodaSaga"],
+      "risk": "low",
+      "consequences": ["Se elimina el juego Candy Crush Soda preinstalado."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Candy Crush Soda Saga'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.candy.blast",
+      "displayName": "Candy Crush Saga",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["king.com.CandyCrushSaga"],
+      "risk": "low",
+      "consequences": ["Se elimina el juego Candy Crush Saga preinstalado."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Candy Crush Saga'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.farmville",
+      "displayName": "Farm Heroes Saga",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["king.com.FarmHeroesSaga"],
+      "risk": "low",
+      "consequences": ["Se elimina el juego Farm Heroes preinstalado."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Farm Heroes Saga'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.petsalon",
+      "displayName": "Pet World - My Animal Hospital",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["4DF76F59.MyAnimalHospital"],
+      "risk": "low",
+      "consequences": ["Se elimina el juego preinstalado."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Pet World'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.twitter",
+      "displayName": "Twitter",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["9E2F88E3.Twitter"],
+      "risk": "low",
+      "consequences": ["Se elimina Twitter UWP; la versión web no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Twitter'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.adobe.photoshop.express",
+      "displayName": "Adobe Photoshop Express",
+      "category": "media",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["AdobeSystemsIncorporated.AdobePhotoshopExpress"],
+      "risk": "low",
+      "consequences": ["Se elimina Photoshop Express UWP; la versión de escritorio no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Adobe Photoshop Express'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.adobe.reader",
+      "displayName": "Adobe Acrobat Reader",
+      "category": "consumer-app",
+      "removalStrategy": "uninstaller",
+      "removalMethod": "uninstaller-string",
+      "uninstallerIds": ["Adobe Acrobat Reader DC", "Adobe Acrobat Reader"],
+      "risk": "low",
+      "consequences": ["Se elimina el lector de PDF; alternativas: Edge, SumatraPDF, Foxit."],
+      "reversal": {"method": "manual-installer", "details": "Descargar desde adobe.com/acrobat/pdf-reader.html."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.wildtangent.games",
+      "displayName": "WildTangent Games",
+      "category": "consumer-app",
+      "removalStrategy": "uninstaller",
+      "removalMethod": "uninstaller-string",
+      "uninstallerIds": ["WildTangent Games", "WT Games"],
+      "risk": "low",
+      "consequences": ["Se eliminan los juegos OEM preinstalados."],
+      "reversal": {"method": "manual-installer", "details": "No reinstalable fácilmente; software OEM."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.dropbox",
+      "displayName": "Dropbox",
+      "category": "consumer-app",
+      "removalStrategy": "uninstaller",
+      "removalMethod": "uninstaller-string",
+      "uninstallerIds": ["Dropbox", "DropboxUpdate"],
+      "risk": "low",
+      "consequences": ["Se elimina Dropbox; archivos en la nube no se pierden."],
+      "reversal": {"method": "manual-installer", "details": "Descargar desde dropbox.com."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.evernote",
+      "displayName": "Evernote",
+      "category": "consumer-app",
+      "removalStrategy": "appx-allusers",
+      "removalMethod": "appx-provisioned",
+      "packageNames": ["Evernote.Evernote"],
+      "risk": "low",
+      "consequences": ["Se elimina Evernote UWP; la versión de escritorio no se ve afectada."],
+      "reversal": {"method": "store-reinstall", "details": "Microsoft Store: 'Evernote'."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "oem.skype.partner",
+      "displayName": "Skype for Desktop (bundled)",
+      "category": "consumer-app",
+      "removalStrategy": "uninstaller",
+      "removalMethod": "uninstaller-string",
+      "uninstallerIds": ["Skype", "Skype version"],
+      "risk": "low",
+      "consequences": ["Se elimina Skype de escritorio."],
+      "reversal": {"method": "manual-installer", "details": "Descargar desde skype.com."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "legacy.ie11",
+      "displayName": "Internet Explorer 11 (Legacy)",
+      "category": "legacy",
+      "removalStrategy": "custom",
+      "removalMethod": "service-and-files",
+      "customScript": "disable-ie11.ps1",
+      "risk": "medium",
+      "consequences": [
+        "IE11 ya está deshabilitado en Windows 11; este tweak asegura que no se pueda reactivar.",
+        "Apps legacy que dependan de MSHTML pueden fallar."
+      ],
+      "reversal": {"method": "registry", "details": "IEHarden=0 o usar 'OptionalFeatures' para reactivar."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "legacy.windowsmedia.player",
+      "displayName": "Windows Media Player (legacy)",
+      "category": "legacy",
+      "removalStrategy": "custom",
+      "removalMethod": "service-and-files",
+      "customScript": "remove-wmp-legacy.ps1",
+      "risk": "low",
+      "consequences": ["Se elimina WMP clásico; la nueva app 'Media Player' no se ve afectada."],
+      "reversal": {"method": "manual-script", "details": "Reinstalar via Optional Features o DISM."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "legacy.stepsrecorder",
+      "displayName": "Steps Recorder",
+      "category": "legacy",
+      "removalStrategy": "custom",
+      "removalMethod": "service-and-files",
+      "customScript": "remove-stepsrecorder.ps1",
+      "risk": "low",
+      "consequences": ["Se elimina Steps Recorder (PSR); reemplazado por Snipping Tool en Win11."],
+      "reversal": {"method": "manual-script", "details": "Restaurar psr.exe desde backup o instalación de Windows."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "legacy.wordpad",
+      "displayName": "WordPad",
+      "category": "legacy",
+      "removalStrategy": "custom",
+      "removalMethod": "service-and-files",
+      "customScript": "remove-wordpad.ps1",
+      "risk": "low",
+      "consequences": ["Se elimina WordPad; usar Notepad o Word como alternativa."],
+      "reversal": {"method": "manual-script", "details": "Restaurar desde Windows Features o backup."},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "tweak.disable-lock-screen-ads",
+      "displayName": "Desactivar sugerencias en pantalla de bloqueo",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "RotatingLockScreenOverlayEnabled",
+          "type": "DWORD",
+          "value": 0
+        },
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-338387Enabled",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Se eliminan las sugerencias y anuncios en la pantalla de bloqueo."],
+      "reversal": {"method": "registry", "details": "RotatingLockScreenOverlayEnabled=1, SubscribedContent-338387Enabled=1"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": false
+    },
+    {
+      "id": "tweak.disable-start-menu-ads",
+      "displayName": "Desactivar sugerencias en menú Inicio",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-338393Enabled",
+          "type": "DWORD",
+          "value": 0
+        },
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-353694Enabled",
+          "type": "DWORD",
+          "value": 0
+        },
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SubscribedContent-353696Enabled",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Se eliminan las sugerencias de apps y tips en el menú Inicio."],
+      "reversal": {"method": "registry", "details": "SubscribedContent-338393Enabled=1, SubscribedContent-353694Enabled=1, SubscribedContent-353696Enabled=1"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": false
+    },
+    {
+      "id": "tweak.disable-content-delivery",
+      "displayName": "Desactivar Content Delivery Manager",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "ContentDeliveryAllowed",
+          "type": "DWORD",
+          "value": 0
+        },
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "OemPreInstalledAppsEnabled",
+          "type": "DWORD",
+          "value": 0
+        },
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "PreInstalledAppsEnabled",
+          "type": "DWORD",
+          "value": 0
+        },
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager",
+          "name": "SilentInstalledAppsEnabled",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": [
+        "Se desactiva la instalación silenciosa de apps promocionales.",
+        "Windows dejará de sugerir apps preinstaladas."
+      ],
+      "reversal": {"method": "registry", "details": "ContentDeliveryAllowed=1, OemPreInstalledAppsEnabled=1, PreInstalledAppsEnabled=1, SilentInstalledAppsEnabled=1"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": false
+    },
+    {
+      "id": "tweak.disable-cortana",
+      "displayName": "Desactivar Cortana",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search",
+          "name": "AllowCortana",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Se desactiva Cortana completamente."],
+      "reversal": {"method": "registry", "details": "AllowCortana=1"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "tweak.disable-location-tracking",
+      "displayName": "Desactivar seguimiento de ubicación",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\location",
+          "name": "Value",
+          "type": "STRING",
+          "value": "Deny"
+        }
+      ],
+      "risk": "medium",
+      "consequences": ["Se desactiva el acceso a ubicación para todas las apps.", "Maps, clima y apps de navegación dejarán de funcionar correctamente."],
+      "reversal": {"method": "registry", "details": "Value=Allow"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "tweak.disable-app-diagnostic",
+      "displayName": "Desactivar acceso a diagnósticos de apps",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\appDiagnostics",
+          "name": "Value",
+          "type": "STRING",
+          "value": "Deny"
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Las apps no podrán acceder a información de diagnóstico del sistema."],
+      "reversal": {"method": "registry", "details": "Value=Allow"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "tweak.disable-background-apps",
+      "displayName": "Desactivar apps en segundo plano",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\BackgroundAccessApplications",
+          "name": "GlobalUserDisabled",
+          "type": "DWORD",
+          "value": 1
+        }
+      ],
+      "risk": "medium",
+      "consequences": [
+        "Las apps UWP no podrán ejecutarse en segundo plano.",
+        "Notificaciones push y actualizaciones en tiempo real pueden dejar de funcionar."
+      ],
+      "reversal": {"method": "registry", "details": "GlobalUserDisabled=0"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": false
+    },
+    {
+      "id": "tweak.disable-game-bar",
+      "displayName": "Desactivar Game Bar",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKCU",
+          "path": "Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR",
+          "name": "AppCaptureEnabled",
+          "type": "DWORD",
+          "value": 0
+        },
+        {
+          "hive": "HKCU",
+          "path": "System\\GameConfigStore",
+          "name": "GameDVR_Enabled",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Se desactiva la grabación de juegos y Game Bar; Win+G no funcionará."],
+      "reversal": {"method": "registry", "details": "AppCaptureEnabled=1, GameDVR_Enabled=1"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": false
+    },
+    {
+      "id": "tweak.disable-telemetry-level",
+      "displayName": "Reducir nivel de telemetría a Security",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection",
+          "name": "AllowTelemetry",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": [
+        "Se reduce la telemetría al nivel mínimo (Security).",
+        "Windows Update puede funcionar con menos datos de diagnóstico."
+      ],
+      "reversal": {"method": "registry", "details": "AllowTelemetry=1 (Basic) o 3 (Full)"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
+    },
+    {
+      "id": "tweak.disable-wifi-sense",
+      "displayName": "Desactivar WiFi Sense",
+      "category": "registry-tweak",
+      "removalStrategy": "registry-only",
+      "removalMethod": "service-and-files",
+      "registryKeys": [
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Microsoft\\PolicyManager\\default\\WiFi\\AllowWiFiHotSpotReporting",
+          "name": "value",
+          "type": "DWORD",
+          "value": 0
+        },
+        {
+          "hive": "HKLM",
+          "path": "SOFTWARE\\Microsoft\\PolicyManager\\default\\WiFi\\AllowAutoConnectToWiFiSenseHotspots",
+          "name": "value",
+          "type": "DWORD",
+          "value": 0
+        }
+      ],
+      "risk": "low",
+      "consequences": ["Se desactiva la compartición automática de redes WiFi."],
+      "reversal": {"method": "registry", "details": "value=1 en ambas claves"},
+      "windowsBuilds": [">=22000"],
+      "requiresElevation": true
     }
   ],
   "_notes": [

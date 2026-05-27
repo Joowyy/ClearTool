@@ -1,0 +1,77 @@
+{
+  "app": {
+    "name": "ClearTool",
+    "version": "v0.5"
+  },
+  "nav": {
+    "home": "Inicio",
+    "explorer": "Explorador",
+    "cache": "Caché",
+    "debloat": "Debloat",
+    "services": "Servicios",
+    "registry": "Registro",
+    "restore": "Restauración",
+    "audit": "Auditoría",
+    "processes": "Procesos",
+    "startup": "Arranque",
+    "disk": "Disco",
+    "privacy": "Privacidad",
+    "settings": "Ajustes"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Eliminar",
+    "enable": "Habilitar",
+    "disable": "Deshabilitar",
+    "save": "Guardar",
+    "search": "Buscar",
+    "noResults": "Sin resultados",
+    "retry": "Reintentar",
+    "back": "Volver"
+  },
+  "cache": {
+    "title": "Limpiador de caché",
+    "scan": "Escanear",
+    "clean": "Limpiar",
+    "dryRun": "Modo simulación",
+    "scanning": "Escaneando...",
+    "cleaning": "Limpiando...",
+    "noCache": "No se encontró caché para limpiar",
+    "selectLocations": "Selecciona las ubicaciones a limpiar"
+  },
+  "debloat": {
+    "title": "Debloat",
+    "detectInstalled": "Detectar instalados",
+    "remove": "Eliminar",
+    "dryRun": "Modo simulación",
+    "presets": {
+      "minimal": "Mínimo",
+      "recommended": "Recomendado",
+      "total": "Total"
+    }
+  },
+  "settings": {
+    "title": "Ajustes",
+    "appearance": "Apariencia",
+    "safety": "Seguridad",
+    "behavior": "Comportamiento",
+    "advanced": "Avanzado",
+    "theme": "Tema",
+    "density": "Densidad",
+    "language": "Idioma",
+    "sidebarCollapsed": "Sidebar colapsado",
+    "followSystem": "Seguir sistema",
+    "themes": {
+      "darkCyan": "Oscuro Cyan",
+      "darkAmber": "Oscuro Ámbar",
+      "light": "Claro"
+    },
+    "densities": {
+      "comfortable": "Cómoda",
+      "compact": "Compacta"
+    }
+  }
+}

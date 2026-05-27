@@ -57,17 +57,36 @@ export interface DirectorySize {
   dirCount: number;
 }
 
+export interface TreemapNode {
+  name: string;
+  path: string;
+  sizeBytes: number;
+  kind: NodeKind;
+  extension: string | null;
+  children: TreemapNode[];
+}
+
+export interface BuildTreemapInput {
+  root: string;
+  maxDepth?: number;
+  minSizeMb?: number;
+  followReparsePoints?: boolean;
+}
+
 export interface CacheLocation {
   id: string;
   displayName: string;
   path: string;
   category?: string | null;
+  strategy?: string | null;
+  lockedBy?: string[];
   requiresAdmin?: boolean;
   risk?: string | null;
   preconditions?: string[];
   filters?: {
     olderThanDays?: number;
     exclude?: string[];
+    include?: string[];
   };
   consequences?: string[];
   averageSize?: string | null;
@@ -366,4 +385,263 @@ export interface Settings {
   safety: SafetySettings;
   behavior: BehaviorSettings;
   advanced: AdvancedSettings;
+}
+
+// ── Cache Engine v2: CleanPlan ───────────────────────────────────────────
+
+export type CleanStrategy =
+  | "direct-delete"
+  | "uwp-app-aware"
+  | "browser-aware"
+  | "process-locked"
+  | "system-restart-required"
+  | "take-ownership-and-delete";
+
+export interface ReadyLocation {
+  id: string;
+  displayName: string;
+  resolvedPath: string;
+  bytes: number;
+  fileCount: number;
+  strategy: CleanStrategy;
+  ageOldestFile: string | null;
+}
+
+export type BlockedAction =
+  | { kind: "closeProcess"; pid: number; processName: string }
+  | { kind: "scheduleReboot" }
+  | { kind: "skipOnly"; reason: string };
+
+export interface BlockedLocation {
+  id: string;
+  displayName: string;
+  resolvedPath: string;
+  bytes: number;
+  lockedBy: LockingProcess[];
+  suggestedAction: BlockedAction;
+}
+
+export interface PermissionLocation {
+  id: string;
+  displayName: string;
+  resolvedPath: string;
+  bytes: number;
+  reason: string;
+}
+
+export type SkipReason =
+  | "does-not-exist"
+  | "empty"
+  | "disallowed-by-allowlist"
+  | { precondition: { name: string } };
+
+export interface SkippedLocation {
+  id: string;
+  displayName: string;
+  reason: SkipReason;
+}
+
+export interface CleanPlan {
+  planId: string;
+  generatedAt: string;
+  ready: ReadyLocation[];
+  blocked: BlockedLocation[];
+  permissionIssues: PermissionLocation[];
+  skipped: SkippedLocation[];
+  totalEstimatedBytes: number;
+  totalBlockedBytes: number;
+}
+
+export interface ExecutePlanOpts {
+  planId: string;
+  autoCloseBlocking: boolean;
+  scheduleBlockedForReboot: boolean;
+  dryRun: boolean;
+  createRestorePoint: boolean;
+  timeoutPerLocationSecs: number;
+}
+
+export type LocationStatus = "cleaned" | "partial-reboot" | "skipped" | "failed";
+
+export interface LocationResult {
+  id: string;
+  status: LocationStatus;
+  bytesFreed: number;
+  bytesScheduled: number;
+  filesDeleted: number;
+  filesScheduled: number;
+  filesFailed: number;
+  error: string | null;
+  durationMs: number;
+}
+
+export interface CleanReportV2 {
+  planId: string;
+  runId: string;
+  startedAt: string;
+  finishedAt: string;
+  restorePointSeq: number | null;
+  perLocation: LocationResult[];
+  totalBytesFreed: number;
+  totalBytesScheduledReboot: number;
+  totalBytesFailed: number;
+  closedProcesses: number[];
+}
+
+export interface PendingRename {
+  source: string;
+  destination: string;
+  isDelete: boolean;
+}
+
+export interface VerifyReport {
+  planId: string;
+  verifiedAt: string;
+  perLocation: VerifyLocationResult[];
+  totalActuallyFreed: number;
+  totalStillPresent: number;
+}
+
+export interface VerifyLocationResult {
+  id: string;
+  displayName: string;
+  bytesBefore: number;
+  bytesAfter: number;
+  bytesActuallyFreed: number;
+  filesPendingReboot: number;
+  successPercent: number;
+}
+
+// ── Universal App Inventory ──────────────────────────────────────────────
+
+export type AppxKind = "user" | "provisioned" | "framework" | "bundle";
+
+export type AppSource =
+  | { kind: "appxPackage"; fullName: string; familyName: string; appxKind: AppxKind }
+  | { kind: "appxProvisioned"; fullName: string }
+  | { kind: "win32Uninstaller"; registryKey: string; hive: string }
+  | { kind: "steam"; appId: number; libraryPath: string }
+  | { kind: "epicGames"; catalogItemId: string; manifestPath: string }
+  | { kind: "gog"; gameId: number }
+  | { kind: "xbox"; packageFamilyName: string; msstoreId: string | null }
+  | { kind: "winget"; id: string };
+
+export type UninstallMethod =
+  | { kind: "appxRemove" }
+  | { kind: "appxProvisionedRemove" }
+  | { kind: "uninstallString"; exe: string; args: string[]; requiresAdmin: boolean }
+  | { kind: "quietUninstallString"; exe: string; args: string[]; requiresAdmin: boolean }
+  | { kind: "msiUninstall"; productCode: string }
+  | { kind: "steamUninstall"; appId: number }
+  | { kind: "epicUninstall"; catalogItemId: string }
+  | { kind: "gogUninstall"; exe: string }
+  | { kind: "noUninstaller" };
+
+export interface CatalogMatch {
+  catalogId: string;
+  requiresDisclaimer: boolean;
+  risk: string;
+  category: string;
+}
+
+export interface ResidualHints {
+  appdataRoaming: string[];
+  appdataLocal: string[];
+  programdata: string[];
+  registryKeys: [string, string][];
+  startMenuShortcuts: string[];
+  desktopShortcuts: string[];
+  scheduledTasks: string[];
+  services: string[];
+  firewallRules: string[];
+}
+
+export interface InstalledApp {
+  id: string;
+  displayName: string;
+  publisher: string | null;
+  version: string | null;
+  source: AppSource;
+  installLocation: string | null;
+  installDate: string | null;
+  sizeBytes: number | null;
+  uninstallMethod: UninstallMethod;
+  isSystemCritical: boolean;
+  catalogMatch: CatalogMatch | null;
+  residualHints: ResidualHints;
+}
+
+export interface UninstallReport {
+  appId: string;
+  displayName: string;
+  dryRun: boolean;
+  success: boolean;
+  methodUsed: string;
+  error: string | null;
+  durationMs: number;
+}
+
+export interface CleanResidualsReport {
+  appId: string;
+  dryRun: boolean;
+  pathsDeleted: string[];
+  registryKeysDeleted: [string, string][];
+  shortcutsDeleted: string[];
+  errors: string[];
+}
+
+export interface UninstallCompleteReport {
+  appId: string;
+  displayName: string;
+  dryRun: boolean;
+  restorePointSeq: number | null;
+  uninstall: UninstallReport;
+  residuals: CleanResidualsReport;
+  auditRunId: string;
+}
+
+export interface SelectedResiduals {
+  appdataRoaming: string[];
+  appdataLocal: string[];
+  programdata: string[];
+  registryKeys: [string, string][];
+  shortcuts: string[];
+}
+
+// ── Startup Manager ────────────────────────────────────────────────────
+
+export type StartupImpact = "unknown" | "low" | "medium" | "high";
+export type StartupCategory =
+  | "updater"
+  | "launcher"
+  | "widget"
+  | "cloud-sync"
+  | "communication"
+  | "media"
+  | "security"
+  | "driver"
+  | "user-app"
+  | "system"
+  | "unknown";
+
+export type StartupOrigin =
+  | { kind: "registry"; hive: string; key: string; name: string }
+  | { kind: "startupFolder"; lnkPath: string }
+  | { kind: "scheduledTask"; taskPath: string }
+  | { kind: "service"; serviceName: string }
+  | { kind: "uwpAutoStart"; packageFamilyName: string; taskId: string };
+
+export interface StartupEntry {
+  id: string;
+  origin: StartupOrigin;
+  displayName: string;
+  command: string;
+  exePath: string | null;
+  iconPath: string | null;
+  publisher: string | null;
+  signatureValid: boolean | null;
+  impact: StartupImpact;
+  lastModified: string | null;
+  enabled: boolean;
+  category: StartupCategory;
 }

@@ -14,14 +14,15 @@
       {
         "label": "main",
         "title": "ClearTool",
-        "width": 1280,
-        "height": 800,
-        "minWidth": 1024,
-        "minHeight": 700,
+        "width": 1440,
+        "height": 920,
+        "minWidth": 1200,
+        "minHeight": 800,
         "resizable": true,
         "decorations": false,
         "transparent": false,
-        "shadow": true
+        "shadow": true,
+        "center": true
       }
     ],
     "security": {

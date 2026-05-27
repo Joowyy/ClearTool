@@ -1,11 +1,8 @@
 /*
  * ClearTool — sistema visual "Quirófano Cyan"
  *
- * Decisiones tomadas tras exploración de dominio (skill interface-design):
- *   - depth strategy: borders-only (dense tool, no shadows dramáticos)
- *   - elevation: shifts de lightness 1-2% (whisper-quiet)
- *   - acento único: cyan #34D2E0 — todo lo demás es estructura
- *   - tipografía: Geist Sans Variable (UI) + JetBrains Mono Variable (datos)
+ * Themes: dark-cyan (default), dark-amber, light
+ * Density: comfortable (default), compact
  *
  * No mezclar este sistema con clases globales antiguas (`.glass`, `.glass-hover`,
  * `.bg-dashboard`) — todas redefinidas aquí abajo con la nueva semántica.
@@ -19,63 +16,177 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    /* ============================================================
-       SUPERFICIES — base carbón con shifts ~1-2% lightness.
-       En modo dark, "elevación" = ligeramente más claro.
-       ============================================================ */
-    --surface-canvas: 213 25% 5%;    /* #0A0D10 fondo de la app */
-    --surface-1: 215 23% 7%;         /* #0E1318 paneles base */
-    --surface-2: 215 22% 10%;        /* #131922 dropdowns, popovers */
-    --surface-3: 215 20% 13%;        /* #182030 menús anidados */
-    --surface-inset: 213 30% 3%;     /* #07090C inputs ("receptáculos") */
+/* ============================================================
+   THEME: dark-cyan (default)
+   ============================================================ */
+:root,
+:root[data-theme="dark-cyan"] {
+  --surface-canvas: 213 25% 5%;
+  --surface-1: 215 23% 7%;
+  --surface-2: 215 22% 10%;
+  --surface-3: 215 20% 13%;
+  --surface-inset: 213 30% 3%;
 
-    /* Texto en 4 niveles — relación AAA con surface-canvas.  */
-    --ink-primary: 210 25% 92%;       /* #E6EDF3 */
-    --ink-secondary: 213 11% 65%;     /* #9AA6B2 supporting */
-    --ink-tertiary: 215 9% 47%;       /* #6B7684 metadata */
-    --ink-muted: 215 11% 30%;         /* #3F4751 disabled/placeholder */
+  --ink-primary: 210 25% 92%;
+  --ink-secondary: 213 11% 65%;
+  --ink-tertiary: 215 9% 47%;
+  --ink-muted: 215 11% 30%;
 
-    /* Borders — alpha sobre el canvas, no hex sólido (evita harshness).  */
-    --edge-subtle: 0 0% 100%;         /* usar con /4 → rgba(255,255,255,0.04) */
-    --edge-default: 0 0% 100%;        /* usar con /7 */
-    --edge-strong: 0 0% 100%;         /* usar con /14 */
-    --edge-focus: 188 70% 55%;        /* cyan focus ring */
+  --edge-subtle: 0 0% 100%;
+  --edge-default: 0 0% 100%;
+  --edge-strong: 0 0% 100%;
+  --edge-focus: 188 70% 55%;
 
-    /* Único acento + semánticos (intencionados, no decorativos).  */
-    --signal-cyan: 188 75% 54%;        /* #34D2E0 */
-    --signal-cyan-press: 188 73% 45%;  /* #1FB7C5 */
-    --signal-amber: 36 100% 65%;       /* #FFB94A */
-    --signal-red: 0 91% 71%;           /* #F87171 */
-    --signal-red-press: 0 73% 51%;     /* #DC2626 */
-    --signal-emerald: 142 71% 58%;     /* #4ADE80 — chips, no decoración */
+  --signal-cyan: 188 75% 54%;
+  --signal-cyan-press: 188 73% 45%;
+  --signal-amber: 36 100% 65%;
+  --signal-red: 0 91% 71%;
+  --signal-red-press: 0 73% 51%;
+  --signal-emerald: 142 71% 58%;
 
-    /* ============================================================
-       Compatibilidad shadcn — mapeo a tokens semánticos.
-       Estos los consume Button/Card/etc. Mantienen API intacta.
-       ============================================================ */
-    --background: var(--surface-canvas);
-    --foreground: var(--ink-primary);
-    --card: var(--surface-1);
-    --card-foreground: var(--ink-primary);
-    --popover: var(--surface-2);
-    --popover-foreground: var(--ink-primary);
-    --primary: var(--signal-cyan);
-    --primary-foreground: var(--surface-canvas);
-    --secondary: var(--surface-2);
-    --secondary-foreground: var(--ink-primary);
-    --muted: var(--surface-2);
-    --muted-foreground: var(--ink-secondary);
-    --accent: var(--signal-cyan);
-    --accent-foreground: var(--surface-canvas);
-    --destructive: var(--signal-red);
-    --destructive-foreground: var(--surface-canvas);
-    --border: 215 18% 16%;             /* sólido para Tailwind `border-border` */
-    --input: var(--surface-inset);
-    --ring: var(--edge-focus);
-    --radius: 0.5rem;
-  }
+  --background: var(--surface-canvas);
+  --foreground: var(--ink-primary);
+  --card: var(--surface-1);
+  --card-foreground: var(--ink-primary);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--ink-primary);
+  --primary: var(--signal-cyan);
+  --primary-foreground: var(--surface-canvas);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink-primary);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--ink-secondary);
+  --accent: var(--signal-cyan);
+  --accent-foreground: var(--surface-canvas);
+  --destructive: var(--signal-red);
+  --destructive-foreground: var(--surface-canvas);
+  --border: 215 18% 16%;
+  --input: var(--surface-inset);
+  --ring: var(--edge-focus);
+  --radius: 0.5rem;
+}
+
+/* ============================================================
+   THEME: dark-amber
+   ============================================================ */
+:root[data-theme="dark-amber"] {
+  --surface-canvas: 220 15% 5%;
+  --surface-1: 220 13% 7%;
+  --surface-2: 220 12% 10%;
+  --surface-3: 220 10% 13%;
+  --surface-inset: 220 20% 3%;
+
+  --ink-primary: 40 20% 92%;
+  --ink-secondary: 40 10% 65%;
+  --ink-tertiary: 40 8% 47%;
+  --ink-muted: 40 10% 30%;
+
+  --edge-subtle: 0 0% 100%;
+  --edge-default: 0 0% 100%;
+  --edge-strong: 0 0% 100%;
+  --edge-focus: 38 92% 55%;
+
+  --signal-cyan: 38 92% 55%;
+  --signal-cyan-press: 35 85% 45%;
+  --signal-amber: 36 100% 65%;
+  --signal-red: 0 91% 71%;
+  --signal-red-press: 0 73% 51%;
+  --signal-emerald: 142 71% 58%;
+
+  --background: var(--surface-canvas);
+  --foreground: var(--ink-primary);
+  --card: var(--surface-1);
+  --card-foreground: var(--ink-primary);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--ink-primary);
+  --primary: var(--signal-cyan);
+  --primary-foreground: var(--surface-canvas);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink-primary);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--ink-secondary);
+  --accent: var(--signal-cyan);
+  --accent-foreground: var(--surface-canvas);
+  --destructive: var(--signal-red);
+  --destructive-foreground: var(--surface-canvas);
+  --border: 220 14% 16%;
+  --input: var(--surface-inset);
+  --ring: var(--edge-focus);
+  --radius: 0.5rem;
+}
+
+/* ============================================================
+   THEME: light
+   ============================================================ */
+:root[data-theme="light"] {
+  --surface-canvas: 210 20% 98%;
+  --surface-1: 0 0% 100%;
+  --surface-2: 210 15% 96%;
+  --surface-3: 210 12% 93%;
+  --surface-inset: 210 15% 94%;
+
+  --ink-primary: 215 28% 17%;
+  --ink-secondary: 215 16% 40%;
+  --ink-tertiary: 215 12% 55%;
+  --ink-muted: 215 10% 70%;
+
+  --edge-subtle: 0 0% 0%;
+  --edge-default: 0 0% 0%;
+  --edge-strong: 0 0% 0%;
+  --edge-focus: 188 70% 40%;
+
+  --signal-cyan: 188 70% 35%;
+  --signal-cyan-press: 188 65% 28%;
+  --signal-amber: 36 90% 45%;
+  --signal-red: 0 80% 50%;
+  --signal-red-press: 0 70% 42%;
+  --signal-emerald: 142 65% 38%;
+
+  --background: var(--surface-canvas);
+  --foreground: var(--ink-primary);
+  --card: var(--surface-1);
+  --card-foreground: var(--ink-primary);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--ink-primary);
+  --primary: var(--signal-cyan);
+  --primary-foreground: 0 0% 100%;
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink-primary);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--ink-secondary);
+  --accent: var(--signal-cyan);
+  --accent-foreground: 0 0% 100%;
+  --destructive: var(--signal-red);
+  --destructive-foreground: 0 0% 100%;
+  --border: 215 15% 88%;
+  --input: var(--surface-inset);
+  --ring: var(--edge-focus);
+  --radius: 0.5rem;
+}
+
+/* ============================================================
+   DENSITY: comfortable (default)
+   ============================================================ */
+:root,
+:root[data-density="comfortable"] {
+  --table-cell-padding: 12px 16px;
+  --row-height: 44px;
+  --sidebar-width: 220px;
+  --sidebar-collapsed-width: 56px;
+  --panel-padding: 16px;
+  --font-size-base: 14px;
+}
+
+/* ============================================================
+   DENSITY: compact
+   ============================================================ */
+:root[data-density="compact"] {
+  --table-cell-padding: 6px 10px;
+  --row-height: 32px;
+  --sidebar-width: 180px;
+  --sidebar-collapsed-width: 44px;
+  --panel-padding: 10px;
+  --font-size-base: 13px;
 }
 
 @layer base {
@@ -92,7 +203,7 @@
     height: 100%;
     width: 100%;
     margin: 0;
-    overflow: hidden; /* el shell gestiona scroll por panel */
+    overflow: hidden;
   }
 
   body {
@@ -102,14 +213,13 @@
       "Geist Variable", ui-sans-serif, system-ui, "Segoe UI Variable",
       "Segoe UI", sans-serif;
     font-feature-settings:
-      "ss01", /* Geist: alternate single-storey 'a' */
-      "cv11"; /* slashed zero opcional */
+      "ss01",
+      "cv11";
     font-variation-settings: "wght" 420;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
-  /* Números siempre tabular en datos — paths, tamaños, %.  */
   .font-mono,
   code,
   pre,
@@ -118,7 +228,6 @@
     font-feature-settings: "tnum", "calt", "zero";
   }
 
-  /* Scrollbar — fina, casi invisible, cyan al hover. */
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -136,13 +245,11 @@
     background-color: hsl(var(--signal-cyan) / 0.6);
   }
 
-  /* Selección de texto: tinte cyan tenue. */
   ::selection {
     background-color: hsl(var(--signal-cyan) / 0.28);
     color: hsl(var(--ink-primary));
   }
 
-  /* Focus ring uniforme — visible siempre, jamás `outline:none`. */
   :focus-visible {
     outline: 2px solid hsl(var(--edge-focus));
     outline-offset: 2px;
@@ -151,37 +258,32 @@
 }
 
 /* ============================================================
-   Components — utilidades del sistema (no decoración suelta)
+   Components
    ============================================================ */
 @layer components {
-  /* Panel base — superficie 1 con borde subtle. Sustituye al viejo `.glass`. */
   .panel {
     background-color: hsl(var(--surface-1));
     border: 1px solid hsl(var(--edge-default) / 0.06);
     border-radius: 10px;
   }
 
-  /* Panel elevado — para dropdowns/popovers. */
   .panel-raised {
     background-color: hsl(var(--surface-2));
     border: 1px solid hsl(var(--edge-default) / 0.08);
     border-radius: 10px;
   }
 
-  /* Pillar (titlebar, chips persistentes) — más oscuro que canvas. */
   .pillar {
     background-color: hsl(var(--surface-inset));
     border: 1px solid hsl(var(--edge-default) / 0.05);
   }
 
-  /* Inset — para inputs y zonas que "reciben" contenido. */
   .inset {
     background-color: hsl(var(--surface-inset));
     border: 1px solid hsl(var(--edge-subtle) / 0.05);
     border-radius: 6px;
   }
 
-  /* Tab — pill horizontal estilo Linear, underline cyan en activo. */
   .tab {
     @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full
            text-xs font-medium tracking-tight
@@ -196,7 +298,6 @@
     box-shadow: inset 0 0 0 1px hsl(var(--signal-cyan) / 0.22);
   }
 
-  /* Chip — para status (admin/limited/usuario). */
   .chip {
     @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md
            text-2xs font-medium tracking-tight tabular-nums;
@@ -225,13 +326,10 @@
     background-color: hsl(var(--signal-emerald) / 0.06);
   }
 
-  /* Drag region — para titlebar. data-tauri-drag-region en HTML maneja
-     el arrastre nativo; este helper es solo para excluir áreas. */
   .no-drag {
     -webkit-app-region: no-drag;
   }
 
-  /* Fondo de la app — solo el grano técnico, sin gradiente "marketing". */
   .bg-grid-fine {
     background-image:
       linear-gradient(
@@ -247,11 +345,6 @@
     background-position: -1px -1px;
   }
 
-  /* ============================================================
-     LEGADO — alias para mantener viva la HomePage 3D existente
-     mientras se migra a tokens nuevos. Mismas clases, semántica
-     equivalente. Borrar tras migración completa de cada page.
-     ============================================================ */
   .glass {
     @apply panel;
     padding: 1rem;

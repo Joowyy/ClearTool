@@ -9,4 +9,7 @@ export const ROUTES = {
   AUDIT: "/audit",
   SETTINGS: "/settings",
   PROCESSES: "/processes",
+  STARTUP: "/startup",
+  DISK: "/disk",
+  PRIVACY: "/privacy",
 } as const;

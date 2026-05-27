@@ -62,6 +62,13 @@ pub enum ReverseRecipe {
         package_family_name: String,
         store_url: Option<String>,
     },
+    StartupToggle {
+        origin: crate::models::startup::StartupOrigin,
+        previous_enabled: bool,
+    },
+    Composite {
+        recipes: Vec<ReverseRecipe>,
+    },
     Noop {
         reason: String,
     },

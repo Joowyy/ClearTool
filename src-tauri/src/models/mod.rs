@@ -7,11 +7,16 @@
 
 pub mod cache;
 pub mod debloat;
+pub mod disk;
+pub mod inventory;
+pub mod pending_rename;
+pub mod privacy;
 pub mod process;
 pub mod registry;
 pub mod restore;
 pub mod service;
 pub mod settings;
+pub mod startup;
 pub mod system;
 pub mod telemetry;
 pub mod tree;

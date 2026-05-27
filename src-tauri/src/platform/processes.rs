@@ -1,16 +1,52 @@
 use crate::core::{AppError, AppResult};
 use crate::models::process::{ProcessCategory, ProcessInfo, ReleaseReport, LockingProcess};
+use std::collections::HashMap;
 use std::ffi::c_void;
-use sysinfo::{ProcessesToUpdate, System};
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+use once_cell::sync::{Lazy, OnceCell};
+use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System};
+
+// System compartido para evitar el coste de ~30ms de new() por llamada.
+static SYS: OnceCell<Mutex<System>> = OnceCell::new();
+
+fn get_system() -> &'static Mutex<System> {
+    SYS.get_or_init(|| Mutex::new(System::new()))
+}
 
 const PROTECTED_PROCESS_NAMES: &[&str] = &[
+    // Núcleo del SO
     "system", "registry", "smss.exe",
     "csrss.exe", "wininit.exe", "winlogon.exe", "lsass.exe",
     "services.exe", "fontdrvhost.exe",
     "dwm.exe", "memcompression", "lockapp.exe",
     "msmpeng.exe", "nissrv.exe", "mssense.exe",
     "cleartool.exe",
+    // Shell del usuario (incidente 2026-05-27: explorer.exe fue cerrado)
+    "explorer.exe",
+    "searchhost.exe",
+    "searchapp.exe",
+    "searchui.exe",
+    "startmenuexperiencehost.exe",
+    "shellexperiencehost.exe",
+    "applicationframehost.exe",
+    "runtimebroker.exe",
+    "taskhostw.exe",
+    "sihost.exe",
+    "ctfmon.exe",
+    // Antivirus / EDR — mejor seguro que sorry
+    "avp.exe", "avgnt.exe", "ekrn.exe",
+    "windefend.exe", "securityhealthservice.exe",
 ];
+
+/// Caché en memoria de resultados de who_locks_path.
+/// Los lockers no cambian en menos de 30 s así que evitamos syscalls repetidas.
+#[cfg(windows)]
+static LOCKS_CACHE: Lazy<Mutex<HashMap<std::path::PathBuf, (Instant, Vec<LockingProcess>)>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+#[cfg(windows)]
+const LOCKS_CACHE_TTL: Duration = Duration::from_secs(30);
 
 const COMMON_CACHE_APPS: &[&str] = &[
     "spotify.exe", "discord.exe", "claude.exe", "obsidian.exe",
@@ -19,8 +55,14 @@ const COMMON_CACHE_APPS: &[&str] = &[
 ];
 
 pub fn list_processes_extended() -> AppResult<Vec<ProcessInfo>> {
-    let mut sys = System::new();
-    sys.refresh_processes(ProcessesToUpdate::All, true);
+    let mut sys = get_system()
+        .lock()
+        .map_err(|_| AppError::Permission("system mutex envenenado".into()))?;
+    sys.refresh_processes_specifics(
+        ProcessesToUpdate::All,
+        true,
+        ProcessRefreshKind::new().with_cpu().with_memory(),
+    );
 
     let mut out = Vec::with_capacity(sys.processes().len());
     for (pid, p) in sys.processes() {
@@ -78,10 +120,6 @@ struct ProcessExtra {
 #[cfg(windows)]
 fn query_process_extra(pid: u32) -> Option<ProcessExtra> {
     use windows::Win32::Foundation::CloseHandle;
-    use windows::Win32::System::Diagnostics::ToolHelp::{
-        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW,
-        PROCESSENTRY32W, TH32CS_SNAPPROCESS,
-    };
     use windows::Win32::System::ProcessStatus::GetModuleBaseNameW;
     use windows::Win32::System::RemoteDesktop::ProcessIdToSessionId;
     use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
@@ -427,25 +465,194 @@ fn process_exists(pid: u32) -> bool {
     }
 }
 
+/// Devuelve los procesos que tienen handles abiertos sobre `path` (archivo o carpeta).
+/// Usa Windows Restart Manager API — detecta correctamente procesos que tienen
+/// archivos dentro de un directorio abiertos, no solo el .exe literal.
+/// Fallback al método anterior si RmStartSession falla.
+/// Los resultados se cachean 30 s para evitar syscalls repetidas en el mismo análisis.
 #[cfg(windows)]
 pub fn who_locks_path(path: &std::path::Path) -> AppResult<Vec<LockingProcess>> {
-    let path_str = path.to_string_lossy().to_lowercase();
-    let mut locking = Vec::new();
+    use windows::Win32::System::RestartManager::{
+        RmEndSession, RmGetList, RmRegisterResources, RmStartSession,
+        RM_PROCESS_INFO,
+    };
+    use windows::core::PCWSTR;
 
-    let processes = list_processes_extended()?;
-    for p in &processes {
-        if let Some(exe) = &p.exe_path {
-            if exe.to_lowercase() == path_str {
-                locking.push(LockingProcess {
-                    pid: p.pid,
-                    name: p.name.clone(),
-                    path: p.exe_path.clone(),
-                });
+    // Devolver resultado cacheado si sigue fresco.
+    let cache_key = path.to_path_buf();
+    {
+        if let Ok(guard) = LOCKS_CACHE.lock() {
+            if let Some((ts, cached)) = guard.get(&cache_key) {
+                if ts.elapsed() < LOCKS_CACHE_TTL {
+                    return Ok(cached.clone());
+                }
             }
         }
     }
 
-    Ok(locking)
+    // Si el path es un directorio, muestrear archivos representativos.
+    // Para directorios con >5000 archivos (INetCache, Temp) bajamos a 50.
+    let paths_to_register: Vec<std::path::PathBuf> = if path.is_dir() {
+        collect_sample_files(path)
+    } else {
+        vec![path.to_path_buf()]
+    };
+
+    if paths_to_register.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // Codificar rutas como wide strings (cada una null-terminada).
+    let wide_paths: Vec<Vec<u16>> = paths_to_register
+        .iter()
+        .map(|p| {
+            use std::os::windows::ffi::OsStrExt;
+            p.as_os_str()
+                .encode_wide()
+                .chain(std::iter::once(0u16))
+                .collect()
+        })
+        .collect();
+    let pcwstr_ptrs: Vec<PCWSTR> = wide_paths
+        .iter()
+        .map(|w| PCWSTR(w.as_ptr()))
+        .collect();
+
+    use windows::Win32::Foundation::WIN32_ERROR;
+    const ERROR_SUCCESS: WIN32_ERROR = WIN32_ERROR(0);
+    const ERROR_MORE_DATA: WIN32_ERROR = WIN32_ERROR(234);
+
+    let result = unsafe {
+        let mut session: u32 = 0;
+        // session_key debe ser un buffer mutable wide de CCH_RM_SESSION_KEY + 1 chars.
+        let mut session_key = [0u16; 64];
+        let rc = RmStartSession(
+            &mut session,
+            0,
+            windows::core::PWSTR(session_key.as_mut_ptr()),
+        );
+        if rc != ERROR_SUCCESS {
+            log::warn!("RmStartSession falló ({:?}), usando fallback", rc);
+            return who_locks_path_fallback(path);
+        }
+
+        let result = (|| -> AppResult<Vec<LockingProcess>> {
+            let rc = RmRegisterResources(
+                session,
+                Some(pcwstr_ptrs.as_slice()),
+                None,
+                None,
+            );
+            if rc != ERROR_SUCCESS {
+                return Ok(Vec::new());
+            }
+
+            let mut needed: u32 = 0;
+            let mut count: u32 = 0;
+            let mut reason: u32 = 0;
+            let _ = RmGetList(session, &mut needed, &mut count, None, &mut reason);
+
+            if needed == 0 {
+                return Ok(Vec::new());
+            }
+
+            let mut retries = 0u32;
+            loop {
+                let buf_size = needed;
+                let mut buf: Vec<RM_PROCESS_INFO> =
+                    vec![std::mem::zeroed(); buf_size as usize];
+                count = buf_size;
+                let rc = RmGetList(
+                    session,
+                    &mut needed,
+                    &mut count,
+                    Some(buf.as_mut_ptr()),
+                    &mut reason,
+                );
+                if rc == ERROR_SUCCESS {
+                    let lockers = buf
+                        .into_iter()
+                        .take(count as usize)
+                        .filter(|info| !is_low_pid(info.Process.dwProcessId))
+                        .map(|info| {
+                            let name =
+                                String::from_utf16_lossy(&info.strAppName)
+                                    .trim_end_matches('\0')
+                                    .to_string();
+                            LockingProcess {
+                                pid: info.Process.dwProcessId,
+                                name,
+                                path: None,
+                            }
+                        })
+                        .collect();
+                    return Ok(lockers);
+                }
+                if rc == ERROR_MORE_DATA && retries < 3 {
+                    retries += 1;
+                    continue;
+                }
+                return Ok(Vec::new());
+            }
+        })();
+
+        let _ = RmEndSession(session);
+        result
+    };
+
+    // Cachear resultado para evitar syscalls repetidas en el mismo análisis.
+    if let Ok(lockers) = &result {
+        if let Ok(mut guard) = LOCKS_CACHE.lock() {
+            guard.insert(cache_key, (Instant::now(), lockers.clone()));
+        }
+    }
+    result
+}
+
+#[cfg(windows)]
+fn collect_sample_files(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+    use walkdir::WalkDir;
+    // Recogemos hasta 5001 archivos; si hay más, es un directorio grande
+    // (INetCache, Temp) y usamos 50 en lugar de 200 para mantener Restart Manager rápido.
+    let mut files: Vec<(u64, std::path::PathBuf)> = WalkDir::new(dir)
+        .max_depth(2)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .filter_map(|e| {
+            let size = e.metadata().ok()?.len();
+            Some((size, e.into_path()))
+        })
+        .take(5_001)
+        .collect();
+    let max = if files.len() > 5_000 { 50 } else { 200 };
+    files.sort_by(|a, b| b.0.cmp(&a.0));
+    files.into_iter().take(max).map(|(_, p)| p).collect()
+}
+
+#[cfg(windows)]
+fn is_low_pid(pid: u32) -> bool {
+    pid == 0 || pid == 4
+}
+
+#[cfg(windows)]
+fn who_locks_path_fallback(path: &std::path::Path) -> AppResult<Vec<LockingProcess>> {
+    let path_str = path.to_string_lossy().to_lowercase();
+    let processes = list_processes_extended()?;
+    Ok(processes
+        .into_iter()
+        .filter(|p| {
+            p.exe_path
+                .as_deref()
+                .map(|e| e.to_lowercase() == path_str)
+                .unwrap_or(false)
+        })
+        .map(|p| LockingProcess {
+            pid: p.pid,
+            name: p.name,
+            path: p.exe_path,
+        })
+        .collect())
 }
 
 pub async fn release_common_apps_for_cleanup() -> AppResult<ReleaseReport> {
@@ -513,6 +720,25 @@ mod tests {
     }
 
     #[test]
+    fn shell_processes_are_protected() {
+        assert!(is_protected_by_name("explorer.exe"));
+        assert!(is_protected_by_name("Explorer.EXE"));
+        assert!(is_protected_by_name("shellexperiencehost.exe"));
+        assert!(is_protected_by_name("ShellExperienceHost.exe"));
+        assert!(is_protected_by_name("startmenuexperiencehost.exe"));
+        assert!(is_protected_by_name("StartMenuExperienceHost.exe"));
+        assert!(is_protected_by_name("runtimebroker.exe"));
+        assert!(is_protected_by_name("RuntimeBroker.exe"));
+        assert!(is_protected_by_name("searchhost.exe"));
+        assert!(is_protected_by_name("SearchHost.exe"));
+        assert!(is_protected_by_name("dwm.exe"));
+        // Aseguramos que apps de usuario normales NO están protegidas
+        assert!(!is_protected_by_name("spotify.exe"));
+        assert!(!is_protected_by_name("discord.exe"));
+        assert!(!is_protected_by_name("chrome.exe"));
+    }
+
+    #[test]
     fn pid_0_and_4_always_protected() {
         assert!(is_system_protected_pid(0, "idle"));
         assert!(is_system_protected_pid(4, "System"));
@@ -522,7 +748,8 @@ mod tests {
     fn classify_known_processes() {
         assert_eq!(classify("chrome.exe", Some(r"C:\Program Files\Google\Chrome\chrome.exe")), ProcessCategory::Browser);
         assert_eq!(classify("spotify.exe", Some(r"C:\Users\test\AppData\Roaming\Spotify\spotify.exe")), ProcessCategory::Media);
-        assert_eq!(classify("svchost.exe", Some(r"C:\Windows\System32\svchost.exe")), ProcessCategory::Service);
+        // svchost vive en System32 → el check de path gana sobre el de nombre
+        assert_eq!(classify("svchost.exe", Some(r"C:\Windows\System32\svchost.exe")), ProcessCategory::System);
         assert_eq!(classify("notepad.exe", Some(r"C:\Windows\System32\notepad.exe")), ProcessCategory::System);
         assert_eq!(classify("myapp.exe", Some(r"C:\Program Files\MyApp\myapp.exe")), ProcessCategory::UserApp);
     }
