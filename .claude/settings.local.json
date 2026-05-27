@@ -29,7 +29,13 @@
       "Read(//c/Users/joels/.cargo/registry/src/**)",
       "Bash(xargs grep -l \"ProcessRefreshKind\")",
       "Bash(xargs grep -l \"create_restore_point\")",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git rm *)",
+      "Bash(git mv *)",
+      "Bash(git diff *)",
+      "Bash(npm ls *)"
     ],
     "additionalDirectories": [
       "z:\\NewEra\\Proyectos\\ProyectosPersonales\\ClearTool\\.claude\\specs\\v2\\04-modules"

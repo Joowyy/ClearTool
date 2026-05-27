@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Trash2,
   ScanLine,
-  AlertTriangle,
   Shield,
   SkipForward,
   CheckCircle2,
@@ -14,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   X,
+  RotateCw,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
@@ -289,10 +289,10 @@ function PlanView({
           Volver
         </Button>
         <div className="flex-1">
-          <h2 className="text-2xl font-bold">Plan de limpieza</h2>
+          <h2 className="text-2xl font-bold">Resumen</h2>
           <p className="text-muted-foreground text-sm">
-            {plan.ready.length} listas · {plan.blocked.length} bloqueadas ·{" "}
-            {plan.permissionIssues.length} permisos · {plan.skipped.length} omitidas
+            {plan.ready.length} se pueden limpiar ahora · {plan.blocked.length} al reiniciar ·{" "}
+            {plan.skipped.length} ya vacías
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={onReAnalyze} disabled={isExecuting}>
@@ -303,11 +303,11 @@ function PlanView({
 
       <div className="flex gap-4 text-sm">
         <div className="px-3 py-1.5 rounded-lg bg-green-900/20 border border-green-800/40">
-          <span className="text-green-400 font-medium">Listas: </span>
+          <span className="text-green-400 font-medium">Se libera ahora: </span>
           <span className="text-muted-foreground">{formatBytes(plan.totalEstimatedBytes)}</span>
         </div>
         <div className="px-3 py-1.5 rounded-lg bg-yellow-900/20 border border-yellow-800/40">
-          <span className="text-yellow-400 font-medium">Bloqueadas: </span>
+          <span className="text-yellow-400 font-medium">Se libera al reiniciar: </span>
           <span className="text-muted-foreground">{formatBytes(plan.totalBlockedBytes)}</span>
         </div>
       </div>
@@ -316,7 +316,7 @@ function PlanView({
         {plan.ready.length > 0 && (
           <SectionCard
             icon={CheckCircle2}
-            title="Listas para limpiar"
+            title="Se limpian ahora"
             count={plan.ready.length}
             totalBytes={plan.totalEstimatedBytes}
             color="green"
@@ -340,8 +340,8 @@ function PlanView({
 
         {plan.blocked.length > 0 && (
           <SectionCard
-            icon={AlertTriangle}
-            title="Bloqueadas por procesos"
+            icon={RotateCw}
+            title="Esperan al próximo reinicio"
             count={plan.blocked.length}
             totalBytes={plan.totalBlockedBytes}
             color="yellow"
@@ -366,7 +366,7 @@ function PlanView({
         {plan.permissionIssues.length > 0 && (
           <SectionCard
             icon={Shield}
-            title="Problemas de permisos"
+            title="Necesitan modo admin"
             count={plan.permissionIssues.length}
             totalBytes={plan.permissionIssues.reduce((s, i) => s + i.bytes, 0)}
             color="red"
@@ -388,7 +388,7 @@ function PlanView({
         {plan.skipped.length > 0 && (
           <SectionCard
             icon={SkipForward}
-            title="Omitidas"
+            title="Ya estaban vacías"
             count={plan.skipped.length}
             totalBytes={0}
             color="gray"
@@ -429,17 +429,17 @@ function PlanView({
 
       <div className="border-t border-border pt-3 flex flex-col gap-2">
         <div className="flex gap-4 text-sm flex-wrap">
-          <label className="flex items-center gap-2 cursor-pointer" title="ClearTool nunca cierra el Explorador, la barra de tareas ni procesos del sistema. Solo cierra navegadores, reproductores y apps de mensajería.">
+          <label className="flex items-center gap-2 cursor-pointer" title="Por seguridad, ClearTool nunca cierra el Explorador de Windows, la barra de tareas ni procesos del sistema — sólo navegadores, mensajería y reproductores de música.">
             <Checkbox checked={autoClose} onCheckedChange={(v) => setAutoClose(!!v)} />
-            <span>Cerrar apps de usuario que estén bloqueando (no toca el sistema)</span>
+            <span><span className="text-amber-400 font-medium">Avanzado:</span> cerrar apps de usuario que estén bloqueando archivos</span>
           </label>
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer" title="Windows tiene estos archivos abiertos. ClearTool los marca para borrarlos automáticamente la próxima vez que reinicies el PC.">
             <Checkbox checked={scheduleReboot} onCheckedChange={(v) => setScheduleReboot(!!v)} />
-            <span>Programar bloqueados para reboot</span>
+            <span>Limpiar al reiniciar lo que no se pueda ahora</span>
           </label>
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer" title="No se borra ningún archivo. Solo se muestra qué se borraría y cuánto espacio se liberaría.">
             <Checkbox checked={dryRun} onCheckedChange={(v) => setDryRun(!!v)} />
-            <span>Dry-run (simular)</span>
+            <span>Sólo simular (no borra nada, sólo te dice qué pasaría)</span>
           </label>
         </div>
         <div className="flex gap-2 mt-1">
@@ -458,8 +458,8 @@ function PlanView({
             {isExecuting
               ? "Ejecutando..."
               : dryRun
-                ? `Simular (${formatBytes(plan.totalEstimatedBytes)})`
-                : `Limpiar (${formatBytes(plan.totalEstimatedBytes)})`}
+                ? `Simular ${formatBytes(plan.totalEstimatedBytes)}`
+                : `Limpiar ${formatBytes(plan.totalEstimatedBytes)}`}
           </Button>
         </div>
       </div>
@@ -501,9 +501,19 @@ function PendingRenamesPanel() {
 
   return (
     <div className="panel rounded-lg border border-edge-default/20 overflow-hidden">
-      <button
-        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-white/5 transition-colors"
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        aria-controls="pending-renames-list"
+        className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-white/5 transition-colors cursor-pointer"
         onClick={() => setExpanded((e) => !e)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setExpanded((v) => !v);
+          }
+        }}
       >
         <div className="flex items-center gap-2">
           <Clock className="h-3.5 w-3.5 text-amber-400" />
@@ -526,7 +536,7 @@ function PendingRenamesPanel() {
             {clearAllMutation.isPending ? (
               <Loader2 className="h-3 w-3 animate-spin mr-1" />
             ) : null}
-            Cancelar todos
+            Quitar de la cola
           </Button>
           {expanded ? (
             <ChevronUp className="h-3.5 w-3.5 text-ink-tertiary" />
@@ -534,10 +544,10 @@ function PendingRenamesPanel() {
             <ChevronDown className="h-3.5 w-3.5 text-ink-tertiary" />
           )}
         </div>
-      </button>
+      </div>
 
       {expanded && (
-        <div className="border-t border-edge-default/10 divide-y divide-edge-default/10 max-h-48 overflow-y-auto">
+        <div id="pending-renames-list" className="border-t border-edge-default/10 divide-y divide-edge-default/10 max-h-48 overflow-y-auto">
           {entries.map((entry: PendingRename) => (
             <div
               key={entry.source}

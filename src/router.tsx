@@ -27,25 +27,36 @@ function LazyPage({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <AppShell />,
+      errorElement: <ErrorBoundary />,
+      children: [
+        { index: true, element: <LazyPage><HomePage /></LazyPage> },
+        { path: ROUTES.EXPLORER, element: <LazyPage><ExplorerPage /></LazyPage> },
+        { path: ROUTES.CACHE, element: <LazyPage><CachePage /></LazyPage> },
+        { path: ROUTES.DEBLOAT, element: <LazyPage><DebloatPage /></LazyPage> },
+        { path: ROUTES.SERVICES, element: <LazyPage><ServicesPage /></LazyPage> },
+        { path: ROUTES.REGISTRY, element: <LazyPage><RegistryPage /></LazyPage> },
+        { path: ROUTES.RESTORE, element: <LazyPage><RestorePage /></LazyPage> },
+        { path: ROUTES.AUDIT, element: <LazyPage><AuditPage /></LazyPage> },
+        { path: ROUTES.PROCESSES, element: <LazyPage><ProcessesPage /></LazyPage> },
+        { path: ROUTES.STARTUP, element: <LazyPage><StartupPage /></LazyPage> },
+        { path: ROUTES.DISK, element: <LazyPage><DiskPage /></LazyPage> },
+        { path: ROUTES.PRIVACY, element: <LazyPage><PrivacyPage /></LazyPage> },
+        { path: ROUTES.SETTINGS, element: <LazyPage><SettingsPage /></LazyPage> },
+      ],
+    },
+  ],
   {
-    path: "/",
-    element: <AppShell />,
-    errorElement: <ErrorBoundary />,
-    children: [
-      { index: true, element: <LazyPage><HomePage /></LazyPage> },
-      { path: ROUTES.EXPLORER, element: <LazyPage><ExplorerPage /></LazyPage> },
-      { path: ROUTES.CACHE, element: <LazyPage><CachePage /></LazyPage> },
-      { path: ROUTES.DEBLOAT, element: <LazyPage><DebloatPage /></LazyPage> },
-      { path: ROUTES.SERVICES, element: <LazyPage><ServicesPage /></LazyPage> },
-      { path: ROUTES.REGISTRY, element: <LazyPage><RegistryPage /></LazyPage> },
-      { path: ROUTES.RESTORE, element: <LazyPage><RestorePage /></LazyPage> },
-      { path: ROUTES.AUDIT, element: <LazyPage><AuditPage /></LazyPage> },
-      { path: ROUTES.PROCESSES, element: <LazyPage><ProcessesPage /></LazyPage> },
-      { path: ROUTES.STARTUP, element: <LazyPage><StartupPage /></LazyPage> },
-      { path: ROUTES.DISK, element: <LazyPage><DiskPage /></LazyPage> },
-      { path: ROUTES.PRIVACY, element: <LazyPage><PrivacyPage /></LazyPage> },
-      { path: ROUTES.SETTINGS, element: <LazyPage><SettingsPage /></LazyPage> },
-    ],
-  },
-]);
+    future: {
+      v7_relativeSplatPath: true,
+      v7_fetcherPersist: true,
+      v7_normalizeFormMethod: true,
+      v7_partialHydration: true,
+      v7_skipActionErrorRevalidation: true,
+    },
+  }
+);
