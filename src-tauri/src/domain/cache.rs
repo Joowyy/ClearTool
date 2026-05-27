@@ -963,11 +963,7 @@ pub async fn execute_plan<E: CleanEmitter>(
 
             join_set.spawn(async move {
                 let loc_start = Instant::now();
-                let mut loc_bytes_freed: u64 = 0;
-                let mut loc_bytes_scheduled: u64 = 0;
-                let mut loc_files_deleted: u32 = 0;
-                let mut loc_files_scheduled: u32 = 0;
-                let mut loc_files_failed: u32 = 0;
+                let mut counters = DeleteCounters::new();
                 let mut loc_error: Option<String> = None;
 
                 let start_line = CleanLogLine {
@@ -979,16 +975,12 @@ pub async fn execute_plan<E: CleanEmitter>(
 
                 let path = std::path::Path::new(&loc.resolved_path);
                 if opts_clone.dry_run {
-                    loc_bytes_freed = loc.bytes;
-                    loc_files_deleted = loc.file_count;
+                    counters.bytes_freed = loc.bytes;
+                    counters.files_deleted = loc.file_count;
                 } else {
                     if let Err(e) = walk_and_delete_parallel(
                         path,
-                        &mut loc_bytes_freed,
-                        &mut loc_bytes_scheduled,
-                        &mut loc_files_deleted,
-                        &mut loc_files_scheduled,
-                        &mut loc_files_failed,
+                        &mut counters,
                         true,
                         &cancel_clone,
                     ).await {
@@ -997,14 +989,14 @@ pub async fn execute_plan<E: CleanEmitter>(
                 }
 
                 let done_line = CleanLogLine {
-                    level: if loc_files_failed > 0 { "warn" } else { "success" }.into(),
+                    level: if counters.files_failed > 0 { "warn" } else { "success" }.into(),
                     location: loc.display_name.clone(),
                     message: format!(
                         "{} archivos, {} liberados{}",
-                        loc_files_deleted,
-                        format_bytes(loc_bytes_freed),
-                        if loc_files_scheduled > 0 {
-                            format!(" · {} al reiniciar", loc_files_scheduled)
+                        counters.files_deleted,
+                        format_bytes(counters.bytes_freed),
+                        if counters.files_scheduled > 0 {
+                            format!(" · {} al reiniciar", counters.files_scheduled)
                         } else {
                             String::new()
                         }
@@ -1012,9 +1004,9 @@ pub async fn execute_plan<E: CleanEmitter>(
                     timestamp_ms: now_ms(),
                 };
 
-                let status = if loc_files_failed == 0 && loc_files_scheduled == 0 {
+                let status = if counters.files_failed == 0 && counters.files_scheduled == 0 {
                     LocationStatus::Cleaned
-                } else if loc_files_scheduled > 0 && loc_files_failed == 0 {
+                } else if counters.files_scheduled > 0 && counters.files_failed == 0 {
                     LocationStatus::PartialReboot
                 } else {
                     LocationStatus::Failed
@@ -1023,11 +1015,11 @@ pub async fn execute_plan<E: CleanEmitter>(
                 let result = LocationResult {
                     id: loc.id.clone(),
                     status,
-                    bytes_freed: loc_bytes_freed,
-                    bytes_scheduled: loc_bytes_scheduled,
-                    files_deleted: loc_files_deleted,
-                    files_scheduled: loc_files_scheduled,
-                    files_failed: loc_files_failed,
+                    bytes_freed: counters.bytes_freed,
+                    bytes_scheduled: counters.bytes_scheduled,
+                    files_deleted: counters.files_deleted,
+                    files_scheduled: counters.files_scheduled,
+                    files_failed: counters.files_failed,
                     error: loc_error,
                     duration_ms: loc_start.elapsed().as_millis() as u64,
                 };
@@ -1159,21 +1151,38 @@ pub async fn execute_plan<E: CleanEmitter>(
     Ok(report)
 }
 
+struct DeleteCounters {
+    bytes_freed: u64,
+    bytes_scheduled: u64,
+    files_deleted: u32,
+    files_scheduled: u32,
+    files_failed: u32,
+}
+
+impl DeleteCounters {
+    fn new() -> Self {
+        Self {
+            bytes_freed: 0,
+            bytes_scheduled: 0,
+            files_deleted: 0,
+            files_scheduled: 0,
+            files_failed: 0,
+        }
+    }
+}
+
 async fn walk_and_delete_parallel(
     path: &std::path::Path,
-    bytes_freed: &mut u64,
-    bytes_scheduled: &mut u64,
-    files_deleted: &mut u32,
-    files_scheduled: &mut u32,
-    files_failed: &mut u32,
+    counters: &mut DeleteCounters,
     schedule_on_fail: bool,
     cancel: &CancellationToken,
 ) -> AppResult<()> {
     let mut entries = tokio::fs::read_dir(path).await.map_err(|e| {
-        crate::core::AppError::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("read_dir {}: {}", path.display(), e),
-        ))
+        crate::core::AppError::Io(std::io::Error::other(format!(
+            "read_dir {}: {}",
+            path.display(),
+            e
+        )))
     })?;
 
     let mut file_paths: Vec<std::path::PathBuf> = Vec::with_capacity(64);
@@ -1195,11 +1204,7 @@ async fn walk_and_delete_parallel(
         if md.is_dir() {
             Box::pin(walk_and_delete_parallel(
                 &entry_path,
-                bytes_freed,
-                bytes_scheduled,
-                files_deleted,
-                files_scheduled,
-                files_failed,
+                counters,
                 schedule_on_fail,
                 cancel,
             ))
@@ -1208,41 +1213,19 @@ async fn walk_and_delete_parallel(
         } else {
             file_paths.push(entry_path);
             if file_paths.len() >= 64 {
-                drain_file_batch(
-                    &mut file_paths,
-                    bytes_freed,
-                    bytes_scheduled,
-                    files_deleted,
-                    files_scheduled,
-                    files_failed,
-                    schedule_on_fail,
-                )
-                .await;
+                drain_file_batch(&mut file_paths, counters, schedule_on_fail).await;
             }
         }
     }
 
-    drain_file_batch(
-        &mut file_paths,
-        bytes_freed,
-        bytes_scheduled,
-        files_deleted,
-        files_scheduled,
-        files_failed,
-        schedule_on_fail,
-    )
-    .await;
+    drain_file_batch(&mut file_paths, counters, schedule_on_fail).await;
 
     Ok(())
 }
 
 async fn drain_file_batch(
     batch: &mut Vec<std::path::PathBuf>,
-    bytes_freed: &mut u64,
-    bytes_scheduled: &mut u64,
-    files_deleted: &mut u32,
-    files_scheduled: &mut u32,
-    files_failed: &mut u32,
+    counters: &mut DeleteCounters,
     schedule_on_fail: bool,
 ) {
     use futures::stream::{self, StreamExt};
@@ -1254,7 +1237,7 @@ async fn drain_file_batch(
     let f_sched = AtomicU32::new(0);
     let f_fail = AtomicU32::new(0);
 
-    let paths: Vec<_> = batch.drain(..).collect();
+    let paths: Vec<_> = std::mem::take(batch);
 
     stream::iter(paths)
         .for_each_concurrent(16, |p| {
@@ -1286,11 +1269,11 @@ async fn drain_file_batch(
         })
         .await;
 
-    *bytes_freed += b_freed.load(Ordering::Relaxed);
-    *bytes_scheduled += b_sched.load(Ordering::Relaxed);
-    *files_deleted += f_del.load(Ordering::Relaxed);
-    *files_scheduled += f_sched.load(Ordering::Relaxed);
-    *files_failed += f_fail.load(Ordering::Relaxed);
+    counters.bytes_freed += b_freed.load(Ordering::Relaxed);
+    counters.bytes_scheduled += b_sched.load(Ordering::Relaxed);
+    counters.files_deleted += f_del.load(Ordering::Relaxed);
+    counters.files_scheduled += f_sched.load(Ordering::Relaxed);
+    counters.files_failed += f_fail.load(Ordering::Relaxed);
 }
 
 fn walk_and_schedule(path: &std::path::Path) -> AppResult<()> {
