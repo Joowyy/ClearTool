@@ -27,12 +27,11 @@
 | [`05-three-context-lost.md`](05-three-context-lost.md) | Three.js/R3F internals, `frameloop="demand"`, `webglcontextlost` handler, `powerPreference`, fallback 2D, detección de WebGL. Requiere conocer el ciclo de render de R3F a fondo y saber cuándo `invalidate()` es necesario. |
 | [`08-redundancias-y-perf.md`](08-redundancias-y-perf.md) | Optimización multi-capa: throttle de eventos IPC, caché de `who_locks_path`, memoización selectiva, defaults globales de React Query, eliminar scan duplicado. Requiere razonar sobre el impacto de cada cambio en CPU/GPU/IPC. |
 
-### Set B — Consola de limpieza (estado: ⏳ pendiente)
+### Set B — Consola de limpieza (estado: ✅ implementado)
 
-Cuatro bloques que se implementan **en orden estricto** porque cada uno
-depende del anterior. El objetivo es sustituir el spinner mudo de
-"Limpiar" por una experiencia visual rica con ETA, fase actual,
-animación 3D y resumen final.
+Cuatro bloques que sustituyeron el spinner mudo de "Limpiar" por una
+experiencia visual rica con ETA, fase actual, animación 3D y resumen
+final.
 
 | Doc | Qué resuelve | Depende de |
 |---|---|---|
@@ -41,21 +40,38 @@ animación 3D y resumen final.
 | [`11-clean-visualizer-r3f.md`](11-clean-visualizer-r3f.md) | Visualización 3D 120×120 px en el header de la consola: anillo de progreso + halo + partículas orbitando. Color cambia por fase. Respeta frameloop="demand", powerPreference low-power, context-lost handlers. Fallback SVG. | 10 |
 | [`12-eta-estimate-and-summary.md`](12-eta-estimate-and-summary.md) | Tiempo estimado en el PlanView **antes** de pulsar Limpiar (basado en throughput histórico). `CleanSummaryHero` al terminar con métricas (espacio liberado, duración, archivos, restore point, errores). Cerrar consola invalida queries. | 09, 10 |
 
+### Set C — Quality of life de la consola (estado: ⏳ pendiente)
+
+Cuatro bloques que resuelven bugs reportados por el usuario tras
+probar la consola y proponen una **reescritura del motor** para
+pasar de ~880 KB/s a ≥10 MB/s.
+
+| Doc | Qué resuelve | Sev |
+|---|---|---|
+| [`13-cancellation-token-and-button.md`](13-cancellation-token-and-button.md) | `tokio_util::CancellationToken` E2E, registro global por `runId`, propagación en `execute_plan` y `walk_and_delete`, IPC `cancel_clean_plan`, botón Cancelar en `CleanConsole` con estado `cancelling`, caso `cancelled` en `CleanSummaryHero`. | 🟡 P1 |
+| [`14-eta-calculating-forever-fix.md`](14-eta-calculating-forever-fix.md) | El ETA siempre "calculando…" porque el threshold de throughput estaba en 1 MB/s y el caso real son ~880 KB/s. Bajar a 50 KB/s, fallback al throughput acumulado, flag `etaIsPrecise` para mostrar rango si no es preciso. | 🟡 P1 |
+| [`15-residual-bytes-investigation.md`](15-residual-bytes-investigation.md) | Los ~400 MB residuales clasificados por motivo (`LockedBySystem`, `PendingReboot`, `AccessDenied`, `FilteredOut`, `ReparsePoint`), UI "Quedó pendiente" en el summary, acción **Ignorar** persistida en `cache-ignore.json`, CTA "Reiniciar ahora". | 🟡 P1 |
+| [`16-performance-overhaul.md`](16-performance-overhaul.md) | **Crítico.** 7 min 36 s para 400 MB es inaceptable. `tokio::JoinSet` con `PARALLEL_LOCATIONS=4`, `tokio::fs` async, `stream::for_each_concurrent(8)` dentro de cada ubicación, eliminar retry con sleeps (try-once-or-schedule), lazy `who_locks_path`, `TrackerHandle` thread-safe. Speedup objetivo ≥10×. **Requiere security-auditor.** | 🔴 P0 |
+
 ## Recomendación de orden global
 
-**Set A → Set B**. Dentro de Set B: 09 → 10 → 11 → 12 (estricto).
+**Set A → Set B → Set C**. Dentro de cada set, orden estricto.
 
 Concretamente:
 
 1. **01** — proteger el shell (P0). ✅
-2. **02** — auto-analyze al boot (P1, depende de 01). ✅
-3. **08** — redundancias (P2, depende de 02). ✅
-4. **05** — Three.js Context Lost (P1, independiente). ✅
-5. **09** — pipeline de progreso enriquecido (P1).
-6. **10** — componente `CleanConsole` (P1, depende de 09).
-7. **11** — visualización 3D (P2, depende de 10 — sólo añade un slot
-   visual; el resto del flujo funciona sin él).
-8. **12** — estimación previa + resumen final (P1, depende de 09 y 10).
+2. **02** — auto-analyze al boot (P1). ✅
+3. **08** — redundancias (P2). ✅
+4. **05** — Three.js Context Lost (P1). ✅
+5. **09** — pipeline de progreso enriquecido (P1). ✅
+6. **10** — componente `CleanConsole` (P1). ✅
+7. **11** — visualización 3D (P2). ✅
+8. **12** — estimación previa + resumen final (P1). ✅
+9. **13** — cancelación E2E + botón (P1).
+10. **14** — ETA fix (P1, independiente — puede ir en paralelo).
+11. **15** — residuales con desglose y acciones (P1, depende de 12).
+12. **16** — performance overhaul (P0, **el más invasivo del Set C**,
+    requiere `security-auditor`).
 
 ## Convenciones para esta carpeta
 

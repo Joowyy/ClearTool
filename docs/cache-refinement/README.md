@@ -18,32 +18,43 @@ ejecución** y, por tanto, qué modelo de IA debería atacarlos:
 
 ```
 docs/cache-refinement/
-├── README.md                            ← este archivo (mapa global)
-├── sonnet-4.6/                          ← tareas DIFÍCILES (backend Rust, internals, R3F)
+├── README.md                                  ← este archivo (mapa global)
+├── sonnet-4.6/                                ← DIFÍCILES (backend Rust, R3F, perf)
 │   ├── README.md
-│   ├── 01-shell-safe-close.md           ✅ Set A
-│   ├── 02-auto-analyze-on-boot.md       ✅ Set A
-│   ├── 05-three-context-lost.md         ✅ Set A
-│   ├── 08-redundancias-y-perf.md        ✅ Set A
-│   ├── 09-progress-pipeline-backend.md  ⏳ Set B — consola de limpieza
-│   ├── 10-clean-console-frontend.md     ⏳ Set B
-│   ├── 11-clean-visualizer-r3f.md       ⏳ Set B
-│   └── 12-eta-estimate-and-summary.md   ⏳ Set B
-└── qwen-3.6-plus/                       ← tareas FÁCILES (config, copy, HTML)
+│   ├── 01-shell-safe-close.md                 ✅ Set A
+│   ├── 02-auto-analyze-on-boot.md             ✅ Set A
+│   ├── 05-three-context-lost.md               ✅ Set A
+│   ├── 08-redundancias-y-perf.md              ✅ Set A
+│   ├── 09-progress-pipeline-backend.md        ✅ Set B
+│   ├── 10-clean-console-frontend.md           ✅ Set B
+│   ├── 11-clean-visualizer-r3f.md             ✅ Set B
+│   ├── 12-eta-estimate-and-summary.md         ✅ Set B
+│   ├── 13-cancellation-token-and-button.md    ⏳ Set C — quality of life
+│   ├── 14-eta-calculating-forever-fix.md      ⏳ Set C
+│   ├── 15-residual-bytes-investigation.md     ⏳ Set C
+│   └── 16-performance-overhaul.md             ⏳ Set C (P0, ≥10× speedup)
+└── qwen-3.6-plus/                             ← FÁCILES (config, copy, HTML)
     ├── README.md
-    ├── 03-button-in-button.md           ✅
-    ├── 04-react-router-future-flags.md  ✅
-    ├── 06-window-size.md                ✅
-    └── 07-plan-view-copy.md             ✅
+    ├── 03-button-in-button.md                 ✅ Set A
+    ├── 04-react-router-future-flags.md        ✅ Set A
+    ├── 06-window-size.md                      ✅ Set A
+    ├── 07-plan-view-copy.md                   ✅ Set A
+    ├── 08-log-reset-between-runs.md           ⏳ Set C
+    └── 09-log-readability-no-emoji.md         ⏳ Set C
 ```
 
 **Set A — Refinamiento base** (P0/P1): proteger el shell, auto-analyze
-al boot, Three.js Context Lost, redundancias. Ya implementado.
+al boot, Three.js Context Lost, redundancias. ✅ Implementado.
 
 **Set B — Consola de limpieza** (P1/P2): sustituir el spinner de
 "Limpiar" por una consola visual con animación 3D, ETA y resumen
-final. Cuatro bloques que se implementan en orden estricto: 09 → 10 →
-11 → 12.
+final. ✅ Implementado.
+
+**Set C — Quality of life** (P0/P1): tras probar la consola el usuario
+reportó (a) log persistente entre limpiezas, (b) emojis del log poco
+legibles, (c) falta de botón Cancelar, (d) ETA siempre "calculando…",
+(e) ~400 MB residuales sin explicación, (f) **10 min para borrar
+400 MB**. Set C resuelve esto en 6 docs (2 Qwen + 4 Sonnet).
 
 ### ¿Por qué Sonnet 4.6 para lo difícil?
 
@@ -80,6 +91,12 @@ final. Cuatro bloques que se implementan en orden estricto: 09 → 10 →
 | 10 | Falta una consola visual con fase, barra y log durante la limpieza | 🟡 P1 | Sonnet 4.6 | [`sonnet-4.6/10-clean-console-frontend.md`](sonnet-4.6/10-clean-console-frontend.md) |
 | 11 | El usuario pidió "animaciones 3D" en la consola de limpieza | 🟢 P2 | Sonnet 4.6 | [`sonnet-4.6/11-clean-visualizer-r3f.md`](sonnet-4.6/11-clean-visualizer-r3f.md) |
 | 12 | No se ve ETA antes de pulsar Limpiar ni resumen rico al terminar | 🟡 P1 | Sonnet 4.6 | [`sonnet-4.6/12-eta-estimate-and-summary.md`](sonnet-4.6/12-eta-estimate-and-summary.md) |
+| Q08 | El log de la consola se mantiene entre dos limpiezas seguidas | 🟡 P1 | Qwen 3.6 Plus | [`qwen-3.6-plus/08-log-reset-between-runs.md`](qwen-3.6-plus/08-log-reset-between-runs.md) |
+| Q09 | Iconos del log poco legibles; sin emojis, sólo ✓/✗ | 🟢 P2 | Qwen 3.6 Plus | [`qwen-3.6-plus/09-log-readability-no-emoji.md`](qwen-3.6-plus/09-log-readability-no-emoji.md) |
+| 13 | Falta un botón Cancelar la limpieza | 🟡 P1 | Sonnet 4.6 | [`sonnet-4.6/13-cancellation-token-and-button.md`](sonnet-4.6/13-cancellation-token-and-button.md) |
+| 14 | ETA dice "calculando…" eternamente con throughput <1 MB/s | 🟡 P1 | Sonnet 4.6 | [`sonnet-4.6/14-eta-calculating-forever-fix.md`](sonnet-4.6/14-eta-calculating-forever-fix.md) |
+| 15 | ~400 MB residuales tras limpiar; ni explicación ni opción de ignorar | 🟡 P1 | Sonnet 4.6 | [`sonnet-4.6/15-residual-bytes-investigation.md`](sonnet-4.6/15-residual-bytes-investigation.md) |
+| 16 | 7 min 36 s para borrar 56 archivos / 400 MB — motor lentísimo | 🔴 P0 | Sonnet 4.6 | [`sonnet-4.6/16-performance-overhaul.md`](sonnet-4.6/16-performance-overhaul.md) |
 
 Cada documento sigue el formato:
 
@@ -113,19 +130,36 @@ Luego (puede haber paralelismo entre Sonnet y Qwen):
 5. **Qwen → 03, 04, 06** — fixes paralelos y cosméticos.
 6. **Sonnet → 08** — redundancias y perf (depende de 02).
 
-### Set B — Consola de limpieza (estado: ⏳ pendiente)
+### Set B — Consola de limpieza (estado: ✅ implementado)
 
-Estricto en este orden, sin paralelismo (cada uno depende del anterior):
+7. **Sonnet → 09** — pipeline de eventos enriquecidos del backend. ✅
+8. **Sonnet → 10** — componente `CleanConsole`. ✅
+9. **Sonnet → 11** — visualizador 3D R3F. ✅
+10. **Sonnet → 12** — estimación previa + `CleanSummaryHero`. ✅
 
-7. **Sonnet → 09** — pipeline de eventos enriquecidos del backend
-   (CleanProgressPayload, CleanPhase, CleanSummaryPayload + throughput
-   stats persistidos).
-8. **Sonnet → 10** — componente `CleanConsole` (modal + header con
-   fase/ETA/barra + log scrolleable; el toast se mantiene).
-9. **Sonnet → 11** — visualizador 3D R3F (anillo + halo + partículas
-   en el header de la consola).
-10. **Sonnet → 12** — estimación previa en PlanView + `CleanSummaryHero`
-    al terminar + invalidación de queries al cerrar.
+### Set C — Quality of life de la consola (estado: ⏳ pendiente)
+
+Tras probar la consola, el usuario reportó 6 puntos. Repartidos entre
+los dos modelos según dificultad:
+
+**Paralelos** (Qwen y Sonnet a la vez):
+
+11. **Qwen → Q08** — reset del log entre limpiezas (trivial).
+12. **Qwen → Q09** — log más legible sin emojis (cosmético).
+13. **Sonnet → 14** — fix del ETA "calculando…" eterno (independiente
+    del resto del Set C).
+14. **Sonnet → 13** — cancelación E2E con token + botón.
+
+**Después de los anteriores:**
+
+15. **Sonnet → 15** — desglose de los 400 MB residuales + UI
+    "Quedó pendiente" + acción Ignorar. Depende de 13 (caso cancelled
+    en el summary) y de 14 (el ETA correcto es prerequisito visual).
+16. **Sonnet → 16** — **performance overhaul** (P0). Reescribe el
+    motor de limpieza para pasar de ~880 KB/s a ≥10 MB/s. Tocará casi
+    todo `cache.rs`. Pasa por `security-auditor` obligatoriamente. Va
+    al final del Set C porque su scope es el mayor y depende
+    indirectamente de todo lo anterior estar verde.
 
 ---
 
@@ -178,7 +212,18 @@ Estricto en este orden, sin paralelismo (cada uno depende del anterior):
 
 | Doc | Carpeta | Generado | Implementado | Verificado |
 |---|---|---|---|---|
-| 09-progress-pipeline-backend | sonnet-4.6 | ✅ | ❌ | ❌ |
-| 10-clean-console-frontend | sonnet-4.6 | ✅ | ❌ | ❌ |
-| 11-clean-visualizer-r3f | sonnet-4.6 | ✅ | ❌ | ❌ |
-| 12-eta-estimate-and-summary | sonnet-4.6 | ✅ | ❌ | ❌ |
+| 09-progress-pipeline-backend | sonnet-4.6 | ✅ | ✅ | ✅ |
+| 10-clean-console-frontend | sonnet-4.6 | ✅ | ✅ | ✅ |
+| 11-clean-visualizer-r3f | sonnet-4.6 | ✅ | ✅ | ✅ |
+| 12-eta-estimate-and-summary | sonnet-4.6 | ✅ | ✅ | ⚠ ETA bug → doc 14 |
+
+### Set C — Quality of life
+
+| Doc | Carpeta | Generado | Implementado | Verificado |
+|---|---|---|---|---|
+| 08-log-reset-between-runs | qwen-3.6-plus | ✅ | ❌ | ❌ |
+| 09-log-readability-no-emoji | qwen-3.6-plus | ✅ | ❌ | ❌ |
+| 13-cancellation-token-and-button | sonnet-4.6 | ✅ | ❌ | ❌ |
+| 14-eta-calculating-forever-fix | sonnet-4.6 | ✅ | ❌ | ❌ |
+| 15-residual-bytes-investigation | sonnet-4.6 | ✅ | ❌ | ❌ |
+| 16-performance-overhaul | sonnet-4.6 | ✅ | ❌ | ❌ |

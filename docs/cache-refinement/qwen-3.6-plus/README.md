@@ -14,7 +14,9 @@
 - El "criterio de done" se verifica visualmente o con devtools en menos
   de un minuto.
 
-## Índice
+## Sets en esta carpeta
+
+### Set A — Refinamiento base (estado: ✅ implementado)
 
 | Doc | Por qué es fácil |
 |---|---|
@@ -23,16 +25,23 @@
 | [`06-window-size.md`](06-window-size.md) | Editar `width`, `height`, `minWidth`, `minHeight`, `center` en `src-tauri/tauri.conf.json`. Opcionalmente añadir el plugin `tauri-plugin-window-state`. |
 | [`07-plan-view-copy.md`](07-plan-view-copy.md) | Cambiar strings hardcoded en `src/features/cache-cleaner/cache-page.tsx`. Tabla de mapping antes→después incluida en el doc. Volumen mayor pero sin lógica. |
 
+### Set C — Quality of life de la consola (estado: ⏳ pendiente)
+
+| Doc | Por qué es fácil |
+|---|---|
+| [`08-log-reset-between-runs.md`](08-log-reset-between-runs.md) | Añadir `cleanStream.reset()` en 3 puntos de `cache-page.tsx`. Bug funcional: hoy el log se acumula entre limpiezas en la misma sesión. |
+| [`09-log-readability-no-emoji.md`](09-log-readability-no-emoji.md) | Cambiar iconos del log a sólo ✓/✗/▲/·, subir tipografía a `font-sans text-[13px]`, alinear columnas. Un único componente afectado. |
+
 ## Recomendación de orden
 
 Cualquiera. Son independientes entre sí y no se pisan con las tareas
 difíciles. Pueden hacerse en paralelo o todas seguidas.
 
-Si hay que priorizar:
-1. **07** — el copy es lo que más impacta al usuario "para tontos".
-2. **06** — ventana más grande, percepción inmediata.
-3. **03** — quita el warning de devtools y mejora accesibilidad.
-4. **04** — silencia el warning de React Router v7.
+Si hay que priorizar dentro del Set C:
+
+1. **08** — bug funcional reportado por el usuario; arreglo trivial.
+2. **09** — el usuario lo pidió explícitamente para tener la consola
+   "más legible".
 
 ## Convenciones para esta carpeta
 
