@@ -25,8 +25,14 @@ const TTL: Duration = Duration::from_secs(90);
 
 /// Lanza el análisis inicial en background al arrancar la app.
 /// No bloquea el hilo de UI ni el splash de Tauri.
+///
+/// Usa `tauri::async_runtime::spawn` (no `tokio::spawn` directo) porque
+/// `setup()` corre antes de que el runtime Tokio quede registrado como
+/// "current" para el thread principal — `tokio::spawn` panica ahí con
+/// "there is no reactor running". Tauri provee su propio handle que sí
+/// funciona desde setup.
 pub fn spawn_initial_scan() {
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         log::info!("cache_background: iniciando primer análisis perezoso");
         if let Err(e) = recompute_and_store().await {
             log::warn!("cache_background: primer análisis falló: {}", e);

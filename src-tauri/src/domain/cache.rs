@@ -754,7 +754,7 @@ where
     // El plan cacheado deja de ser válido tras una limpieza real.
     if !opts.dry_run {
         crate::domain::cache_background::invalidate();
-        tokio::spawn(async {
+        tauri::async_runtime::spawn(async {
             let _ = crate::domain::cache_background::recompute_and_store().await;
         });
     }
