@@ -50,6 +50,11 @@ pub fn run() {
             // Inicializar preferencias persistentes.
             crate::core::settings::init();
 
+            // Análisis perezoso del catálogo de cachés al arrancar.
+            // No bloquea la UI; el resultado se cachea en memoria para que
+            // el módulo Caché muestre el plan sin que el usuario pulse "Analizar".
+            crate::domain::cache_background::spawn_initial_scan();
+
             // Validación de catálogos: se realiza bajo demanda al primer uso
             // del módulo correspondiente (Debloat, Cache, etc.) en lugar de
             // aquí. Acelera el arranque; un JSON roto en embed falla en CI, no
@@ -88,6 +93,8 @@ pub fn run() {
             ipc::cache::analyze_cache_locations,
             ipc::cache::execute_clean_plan,
             ipc::cache::verify_clean,
+            ipc::cache::get_cache_plan_warm,
+            ipc::cache::refresh_cache_plan,
             // debloat
             ipc::debloat::list_bloatware_catalog,
             ipc::debloat::detect_installed_bloatware,

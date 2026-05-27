@@ -78,3 +78,13 @@ pub async fn execute_clean_plan(
 pub async fn verify_clean(plan: CleanPlan, report: CleanReportV2) -> AppResult<VerifyReport> {
     domain::cache::verify_after_clean(&plan, &report)
 }
+
+#[tauri::command]
+pub async fn get_cache_plan_warm() -> AppResult<Option<CleanPlan>> {
+    Ok(crate::domain::cache_background::get_cached().map(|c| c.plan))
+}
+
+#[tauri::command]
+pub async fn refresh_cache_plan() -> AppResult<CleanPlan> {
+    crate::domain::cache_background::recompute_and_store().await
+}

@@ -6,6 +6,7 @@
 
 pub mod audit;
 pub mod cache;
+pub mod cache_background;
 pub mod catalog;
 pub mod debloat;
 pub mod disk;

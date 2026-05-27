@@ -1,8 +1,10 @@
 use crate::core::{AppError, AppResult};
 use crate::models::process::{ProcessCategory, ProcessInfo, ReleaseReport, LockingProcess};
+use std::collections::HashMap;
 use std::ffi::c_void;
 use std::sync::Mutex;
-use once_cell::sync::OnceCell;
+use std::time::{Duration, Instant};
+use once_cell::sync::{Lazy, OnceCell};
 use sysinfo::{ProcessRefreshKind, ProcessesToUpdate, System};
 
 // System compartido para evitar el coste de ~30ms de new() por llamada.
@@ -13,13 +15,38 @@ fn get_system() -> &'static Mutex<System> {
 }
 
 const PROTECTED_PROCESS_NAMES: &[&str] = &[
+    // Núcleo del SO
     "system", "registry", "smss.exe",
     "csrss.exe", "wininit.exe", "winlogon.exe", "lsass.exe",
     "services.exe", "fontdrvhost.exe",
     "dwm.exe", "memcompression", "lockapp.exe",
     "msmpeng.exe", "nissrv.exe", "mssense.exe",
     "cleartool.exe",
+    // Shell del usuario (incidente 2026-05-27: explorer.exe fue cerrado)
+    "explorer.exe",
+    "searchhost.exe",
+    "searchapp.exe",
+    "searchui.exe",
+    "startmenuexperiencehost.exe",
+    "shellexperiencehost.exe",
+    "applicationframehost.exe",
+    "runtimebroker.exe",
+    "taskhostw.exe",
+    "sihost.exe",
+    "ctfmon.exe",
+    // Antivirus / EDR — mejor seguro que sorry
+    "avp.exe", "avgnt.exe", "ekrn.exe",
+    "windefend.exe", "securityhealthservice.exe",
 ];
+
+/// Caché en memoria de resultados de who_locks_path.
+/// Los lockers no cambian en menos de 30 s así que evitamos syscalls repetidas.
+#[cfg(windows)]
+static LOCKS_CACHE: Lazy<Mutex<HashMap<std::path::PathBuf, (Instant, Vec<LockingProcess>)>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+#[cfg(windows)]
+const LOCKS_CACHE_TTL: Duration = Duration::from_secs(30);
 
 const COMMON_CACHE_APPS: &[&str] = &[
     "spotify.exe", "discord.exe", "claude.exe", "obsidian.exe",
@@ -442,6 +469,7 @@ fn process_exists(pid: u32) -> bool {
 /// Usa Windows Restart Manager API — detecta correctamente procesos que tienen
 /// archivos dentro de un directorio abiertos, no solo el .exe literal.
 /// Fallback al método anterior si RmStartSession falla.
+/// Los resultados se cachean 30 s para evitar syscalls repetidas en el mismo análisis.
 #[cfg(windows)]
 pub fn who_locks_path(path: &std::path::Path) -> AppResult<Vec<LockingProcess>> {
     use windows::Win32::System::RestartManager::{
@@ -450,9 +478,22 @@ pub fn who_locks_path(path: &std::path::Path) -> AppResult<Vec<LockingProcess>> 
     };
     use windows::core::PCWSTR;
 
-    // Si el path es un directorio, muestrear hasta los 200 archivos más grandes.
+    // Devolver resultado cacheado si sigue fresco.
+    let cache_key = path.to_path_buf();
+    {
+        if let Ok(guard) = LOCKS_CACHE.lock() {
+            if let Some((ts, cached)) = guard.get(&cache_key) {
+                if ts.elapsed() < LOCKS_CACHE_TTL {
+                    return Ok(cached.clone());
+                }
+            }
+        }
+    }
+
+    // Si el path es un directorio, muestrear archivos representativos.
+    // Para directorios con >5000 archivos (INetCache, Temp) bajamos a 50.
     let paths_to_register: Vec<std::path::PathBuf> = if path.is_dir() {
-        collect_sample_files(path, 200)
+        collect_sample_files(path)
     } else {
         vec![path.to_path_buf()]
     };
@@ -559,12 +600,20 @@ pub fn who_locks_path(path: &std::path::Path) -> AppResult<Vec<LockingProcess>> 
         result
     };
 
+    // Cachear resultado para evitar syscalls repetidas en el mismo análisis.
+    if let Ok(lockers) = &result {
+        if let Ok(mut guard) = LOCKS_CACHE.lock() {
+            guard.insert(cache_key, (Instant::now(), lockers.clone()));
+        }
+    }
     result
 }
 
 #[cfg(windows)]
-fn collect_sample_files(dir: &std::path::Path, max: usize) -> Vec<std::path::PathBuf> {
+fn collect_sample_files(dir: &std::path::Path) -> Vec<std::path::PathBuf> {
     use walkdir::WalkDir;
+    // Recogemos hasta 5001 archivos; si hay más, es un directorio grande
+    // (INetCache, Temp) y usamos 50 en lugar de 200 para mantener Restart Manager rápido.
     let mut files: Vec<(u64, std::path::PathBuf)> = WalkDir::new(dir)
         .max_depth(2)
         .into_iter()
@@ -574,7 +623,9 @@ fn collect_sample_files(dir: &std::path::Path, max: usize) -> Vec<std::path::Pat
             let size = e.metadata().ok()?.len();
             Some((size, e.into_path()))
         })
+        .take(5_001)
         .collect();
+    let max = if files.len() > 5_000 { 50 } else { 200 };
     files.sort_by(|a, b| b.0.cmp(&a.0));
     files.into_iter().take(max).map(|(_, p)| p).collect()
 }
@@ -669,6 +720,25 @@ mod tests {
     }
 
     #[test]
+    fn shell_processes_are_protected() {
+        assert!(is_protected_by_name("explorer.exe"));
+        assert!(is_protected_by_name("Explorer.EXE"));
+        assert!(is_protected_by_name("shellexperiencehost.exe"));
+        assert!(is_protected_by_name("ShellExperienceHost.exe"));
+        assert!(is_protected_by_name("startmenuexperiencehost.exe"));
+        assert!(is_protected_by_name("StartMenuExperienceHost.exe"));
+        assert!(is_protected_by_name("runtimebroker.exe"));
+        assert!(is_protected_by_name("RuntimeBroker.exe"));
+        assert!(is_protected_by_name("searchhost.exe"));
+        assert!(is_protected_by_name("SearchHost.exe"));
+        assert!(is_protected_by_name("dwm.exe"));
+        // Aseguramos que apps de usuario normales NO están protegidas
+        assert!(!is_protected_by_name("spotify.exe"));
+        assert!(!is_protected_by_name("discord.exe"));
+        assert!(!is_protected_by_name("chrome.exe"));
+    }
+
+    #[test]
     fn pid_0_and_4_always_protected() {
         assert!(is_system_protected_pid(0, "idle"));
         assert!(is_system_protected_pid(4, "System"));
@@ -678,7 +748,8 @@ mod tests {
     fn classify_known_processes() {
         assert_eq!(classify("chrome.exe", Some(r"C:\Program Files\Google\Chrome\chrome.exe")), ProcessCategory::Browser);
         assert_eq!(classify("spotify.exe", Some(r"C:\Users\test\AppData\Roaming\Spotify\spotify.exe")), ProcessCategory::Media);
-        assert_eq!(classify("svchost.exe", Some(r"C:\Windows\System32\svchost.exe")), ProcessCategory::Service);
+        // svchost vive en System32 → el check de path gana sobre el de nombre
+        assert_eq!(classify("svchost.exe", Some(r"C:\Windows\System32\svchost.exe")), ProcessCategory::System);
         assert_eq!(classify("notepad.exe", Some(r"C:\Windows\System32\notepad.exe")), ProcessCategory::System);
         assert_eq!(classify("myapp.exe", Some(r"C:\Program Files\MyApp\myapp.exe")), ProcessCategory::UserApp);
     }

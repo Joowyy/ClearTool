@@ -109,6 +109,17 @@ async function initInvoke(): Promise<void> {
           totalEstimatedBytes: 0,
           totalBlockedBytes: 0,
         },
+        get_cache_plan_warm: null,
+        refresh_cache_plan: {
+          planId: "",
+          generatedAt: "",
+          ready: [],
+          blocked: [],
+          permissionIssues: [],
+          skipped: [],
+          totalEstimatedBytes: 0,
+          totalBlockedBytes: 0,
+        },
         execute_clean_plan: {
           planId: "",
           runId: "",
@@ -267,6 +278,12 @@ export const executeCleanPlan = (plan: CleanPlan, opts: ExecutePlanOpts) =>
 
 export const verifyClean = (plan: CleanPlan, report: CleanReportV2) =>
   invoke<VerifyReport>("verify_clean", { plan, report });
+
+export const getCachePlanWarm = () =>
+  invoke<CleanPlan | null>("get_cache_plan_warm");
+
+export const refreshCachePlan = () =>
+  invoke<CleanPlan>("refresh_cache_plan");
 
 // ── debloat ─────────────────────────────────────────────────────────────
 export const listBloatwareCatalog = () =>

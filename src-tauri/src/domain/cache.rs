@@ -556,6 +556,15 @@ fn scan_path_stats(path: &Path) -> AppResult<(u64, u32, Option<String>)> {
 }
 
 fn suggest_action(lockers: &[LockingProcess], _category: &str) -> BlockedAction {
+    // Si CUALQUIER locker es del shell o sistema, nunca proponer cerrar.
+    // Incidente 2026-05-27: explorer.exe fue cerrado al limpiar thumbcache.
+    let any_critical = lockers.iter().any(|l| {
+        crate::platform::processes::is_protected_by_name(&l.name)
+    });
+    if any_critical {
+        return BlockedAction::ScheduleReboot;
+    }
+
     if let Some(main) = lockers.first() {
         return BlockedAction::CloseProcess {
             pid: main.pid,
@@ -647,7 +656,22 @@ where
     let mut closed_pids: Vec<u32> = Vec::new();
     if opts.auto_close_blocking {
         for blocked in &plan.blocked {
-            if let BlockedAction::CloseProcess { pid, .. } = &blocked.suggested_action {
+            if let BlockedAction::CloseProcess { pid, process_name } = &blocked.suggested_action {
+                // Defensa en profundidad: rechazar aunque el plan los traiga
+                // (catálogo desactualizado, plan antiguo, etc.).
+                if crate::platform::processes::is_protected_by_name(process_name)
+                    || crate::platform::processes::is_system_protected_pid_lookup(*pid)
+                {
+                    emit_progress(
+                        "warn",
+                        &blocked.display_name,
+                        &format!("Omitido cierre de {} (PID {}) — proceso protegido", process_name, pid),
+                        0,
+                        0,
+                    );
+                    continue;
+                }
+
                 emit_progress(
                     "info",
                     &blocked.display_name,
@@ -714,7 +738,7 @@ where
         }
     }
 
-    Ok(CleanReportV2 {
+    let report = CleanReportV2 {
         plan_id: plan.plan_id,
         run_id,
         started_at,
@@ -725,7 +749,17 @@ where
         total_bytes_scheduled_reboot: total_bytes_scheduled,
         total_bytes_failed,
         closed_processes: closed_pids,
-    })
+    };
+
+    // El plan cacheado deja de ser válido tras una limpieza real.
+    if !opts.dry_run {
+        crate::domain::cache_background::invalidate();
+        tokio::spawn(async {
+            let _ = crate::domain::cache_background::recompute_and_store().await;
+        });
+    }
+
+    Ok(report)
 }
 
 async fn execute_one_location<F>(
@@ -946,4 +980,45 @@ fn path_under(child: &str, parent: &str) -> bool {
     let c = child.to_lowercase().replace('/', "\\");
     let p = parent.to_lowercase().replace('/', "\\");
     c.starts_with(&p)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn suggest_action_never_closes_shell() {
+        let lockers = vec![
+            LockingProcess { pid: 1234, name: "explorer.exe".into(), path: None },
+            LockingProcess { pid: 5678, name: "spotify.exe".into(), path: None },
+        ];
+        match suggest_action(&lockers, "user-cache") {
+            BlockedAction::ScheduleReboot => {}
+            other => panic!("Esperado ScheduleReboot, obtuve {:?}", other),
+        }
+    }
+
+    #[test]
+    fn suggest_action_closes_user_apps() {
+        let lockers = vec![
+            LockingProcess { pid: 5678, name: "spotify.exe".into(), path: None },
+        ];
+        match suggest_action(&lockers, "user-cache") {
+            BlockedAction::CloseProcess { process_name, .. } => {
+                assert_eq!(process_name, "spotify.exe");
+            }
+            other => panic!("Esperado CloseProcess, obtuve {:?}", other),
+        }
+    }
+
+    #[test]
+    fn suggest_action_all_shell_lockers_schedules_reboot() {
+        for name in &["explorer.exe", "shellexperiencehost.exe", "searchhost.exe", "dwm.exe"] {
+            let lockers = vec![LockingProcess { pid: 100, name: name.to_string(), path: None }];
+            match suggest_action(&lockers, "cache") {
+                BlockedAction::ScheduleReboot => {}
+                other => panic!("{}: Esperado ScheduleReboot, obtuve {:?}", name, other),
+            }
+        }
+    }
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef, memo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Trash2,
@@ -24,6 +24,8 @@ import {
   analyzeCacheLocations,
   executeCleanPlan,
   verifyClean,
+  getCachePlanWarm,
+  refreshCachePlan,
   listPendingRenames,
   cancelPendingRename,
   clearAllPendingRenames,
@@ -183,7 +185,7 @@ function SelectionView({
 
 // ── Section wrappers ───────────────────────────────────────────────────
 
-function SectionCard({
+const SectionCard = memo(function SectionCard({
   icon: Icon,
   title,
   count,
@@ -225,9 +227,9 @@ function SectionCard({
       <div className="divide-y divide-border/50 px-2 pb-2">{children}</div>
     </details>
   );
-}
+});
 
-function LocationRow({
+const LocationRow = memo(function LocationRow({
   displayName,
   path,
   bytes,
@@ -248,7 +250,7 @@ function LocationRow({
       <div className="text-sm font-mono text-muted-foreground">{formatBytes(bytes)}</div>
     </div>
   );
-}
+});
 
 // ── PlanView ───────────────────────────────────────────────────────────
 
@@ -427,9 +429,9 @@ function PlanView({
 
       <div className="border-t border-border pt-3 flex flex-col gap-2">
         <div className="flex gap-4 text-sm flex-wrap">
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer" title="ClearTool nunca cierra el Explorador, la barra de tareas ni procesos del sistema. Solo cierra navegadores, reproductores y apps de mensajería.">
             <Checkbox checked={autoClose} onCheckedChange={(v) => setAutoClose(!!v)} />
-            <span>Cerrar procesos bloqueantes automáticamente</span>
+            <span>Cerrar apps de usuario que estén bloqueando (no toca el sistema)</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <Checkbox checked={scheduleReboot} onCheckedChange={(v) => setScheduleReboot(!!v)} />
@@ -568,6 +570,9 @@ export function CachePage() {
   const [plan, setPlan] = useState<CleanPlan | null>(null);
   const [report, setReport] = useState<CleanReportV2 | null>(null);
   const [verify, setVerify] = useState<VerifyReport | null>(null);
+  // Logs de progreso con throttle para no saturar el render durante la limpieza.
+  const progressQueueRef = useRef<string[]>([]);
+  const [progressLogs, setProgressLogs] = useState<string[]>([]);
 
   const {
     data: catalog = [],
@@ -578,12 +583,60 @@ export function CachePage() {
     queryFn: listCacheLocations,
   });
 
+  // Plan caliente calculado en background al arrancar la app.
+  const warmPlanQuery = useQuery({
+    queryKey: ["cache-plan-warm"],
+    queryFn: getCachePlanWarm,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Si llega un plan caliente y el usuario todavía no tiene uno, usarlo.
+  useEffect(() => {
+    if (warmPlanQuery.data && !plan) {
+      setPlan(warmPlanQuery.data);
+      const allIds = new Set<string>([
+        ...warmPlanQuery.data.ready.map((r) => r.id),
+        ...warmPlanQuery.data.blocked.map((b) => b.id),
+        ...warmPlanQuery.data.permissionIssues.map((p) => p.id),
+      ]);
+      setSelectedIds(allIds);
+    }
+  }, [warmPlanQuery.data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Refresco silencioso cada 90 s mientras el usuario está en la pestaña.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!plan || executeMutation.isPending) return;
+      void refreshCachePlan().then((p) => {
+        if (p.totalEstimatedBytes !== plan?.totalEstimatedBytes) {
+          setPlan(p);
+        }
+        void qc.invalidateQueries({ queryKey: ["cache-plan-warm"] });
+      }).catch(() => {/* silencioso */});
+    }, 90_000);
+    return () => clearInterval(id);
+  }, [plan, qc]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Throttle: aplica los logs de progreso al estado cada 200 ms
+  // para no redibujarlo 50+ veces en pocos segundos.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const queue = progressQueueRef.current;
+      if (queue.length === 0) return;
+      progressQueueRef.current = [];
+      setProgressLogs((prev) => [...prev, ...queue].slice(-100));
+    }, 200);
+    return () => clearInterval(id);
+  }, []);
+
   const analyzeMutation = useMutation({
     mutationFn: () => analyzeCacheLocations([...selectedIds]),
     onSuccess: (p) => {
       setPlan(p);
       setReport(null);
       setVerify(null);
+      setProgressLogs([]);
     },
     onError: (err) => toast.error("Error analizando ubicaciones", { description: formatError(err) }),
   });
@@ -595,6 +648,8 @@ export function CachePage() {
       dryRun: boolean;
     }) => {
       if (!plan) throw new Error("No hay plan");
+      setProgressLogs([]);
+      progressQueueRef.current = [];
       const r = await executeCleanPlan(plan, {
         planId: plan.planId,
         autoCloseBlocking: opts.autoCloseBlocking,
@@ -610,7 +665,9 @@ export function CachePage() {
       setReport(r);
       setVerify(v);
       if (!dryRun) {
-        void qc.invalidateQueries({ queryKey: ["cache-locations"] });
+        // Invalidar el plan caliente (no el catálogo estático de ubicaciones).
+        void qc.invalidateQueries({ queryKey: ["cache-plan-warm"] });
+        setPlan(null);
       }
       toast.success(
         dryRun ? "Simulación completada" : `Liberados ${formatBytes(r.totalBytesFreed)}`,
@@ -657,7 +714,7 @@ export function CachePage() {
           selectedIds={selectedIds}
           onChange={setSelectedIds}
           onAnalyze={handleAnalyze}
-          isAnalyzing={analyzeMutation.isPending}
+          isAnalyzing={analyzeMutation.isPending || warmPlanQuery.isLoading}
         />
       ) : (
         <PlanView
@@ -669,6 +726,11 @@ export function CachePage() {
           report={report}
           verify={verify}
         />
+      )}
+      {progressLogs.length > 0 && executeMutation.isPending && (
+        <div className="text-xs text-muted-foreground font-mono bg-card/50 border border-border/50 rounded p-2 max-h-24 overflow-y-auto">
+          {progressLogs.map((l, i) => <div key={i}>{l}</div>)}
+        </div>
       )}
     </div>
   );
