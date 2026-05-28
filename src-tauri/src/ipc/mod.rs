@@ -10,7 +10,6 @@ pub mod cache;
 pub mod debloat;
 pub mod diagnostics;
 pub mod disk;
-pub mod explorer;
 pub mod inventory;
 pub mod network;
 pub mod privacy;

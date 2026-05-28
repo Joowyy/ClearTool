@@ -6,7 +6,6 @@ import { TableSkeleton } from "./components/ui/table-skeleton";
 import { ROUTES } from "./lib/routes";
 
 const HomePage = lazy(() => import("./features/home/home-page").then(m => ({ default: m.HomePage })));
-const ExplorerPage = lazy(() => import("./features/explorer/explorer-page").then(m => ({ default: m.ExplorerPage })));
 const CachePage = lazy(() => import("./features/cache-cleaner/cache-page").then(m => ({ default: m.CachePage })));
 const DebloatPage = lazy(() => import("./features/debloat/debloat-page").then(m => ({ default: m.DebloatPage })));
 const ServicesPage = lazy(() => import("./features/services/services-page").then(m => ({ default: m.ServicesPage })));
@@ -35,7 +34,6 @@ export const router = createBrowserRouter(
       errorElement: <ErrorBoundary />,
       children: [
         { index: true, element: <LazyPage><HomePage /></LazyPage> },
-        { path: ROUTES.EXPLORER, element: <LazyPage><ExplorerPage /></LazyPage> },
         { path: ROUTES.CACHE, element: <LazyPage><CachePage /></LazyPage> },
         { path: ROUTES.DEBLOAT, element: <LazyPage><DebloatPage /></LazyPage> },
         { path: ROUTES.SERVICES, element: <LazyPage><ServicesPage /></LazyPage> },

@@ -7,6 +7,145 @@ use crate::core::AppResult;
 use std::path::Path;
 use walkdir::WalkDir;
 
+// ── enumeración de drives (Disk Analyzer) ─────────────────────────────────
+
+#[cfg(target_os = "windows")]
+pub fn enumerate_drives() -> AppResult<Vec<crate::models::disk::DriveListing>> {
+    use crate::models::disk::{DriveListing, DriveType};
+    use windows::core::PCWSTR;
+    use windows::Win32::Storage::FileSystem::{
+        GetDiskFreeSpaceExW, GetDriveTypeW, GetLogicalDrives, GetVolumeInformationW,
+    };
+
+    // Constantes Win32 DRIVE_* (de WinBase.h). No están expuestas como
+    // símbolos en windows-rs 0.58, las inlineamos aquí.
+    const DRIVE_NO_ROOT_DIR: u32 = 1;
+    const DRIVE_REMOVABLE: u32 = 2;
+    const DRIVE_FIXED: u32 = 3;
+    const DRIVE_REMOTE: u32 = 4;
+    const DRIVE_CDROM: u32 = 5;
+    const DRIVE_RAMDISK: u32 = 6;
+
+    let mut out = Vec::new();
+    let mask = unsafe { GetLogicalDrives() };
+    if mask == 0 {
+        return Ok(out);
+    }
+
+    for i in 0u32..26 {
+        if (mask & (1 << i)) == 0 {
+            continue;
+        }
+        let letter_char = (b'A' + i as u8) as char;
+        let root_path = format!("{}:\\", letter_char);
+        let wide: Vec<u16> = root_path.encode_utf16().chain(std::iter::once(0)).collect();
+        let pcwstr = PCWSTR(wide.as_ptr());
+
+        let dt = unsafe { GetDriveTypeW(pcwstr) };
+        let drive_type = match dt {
+            DRIVE_FIXED => DriveType::Fixed,
+            DRIVE_REMOVABLE => DriveType::Removable,
+            DRIVE_REMOTE => DriveType::Network,
+            DRIVE_CDROM => DriveType::CdRom,
+            DRIVE_RAMDISK => DriveType::RamDisk,
+            DRIVE_NO_ROOT_DIR => continue, // no existe la letra realmente
+            _ => DriveType::Unknown,
+        };
+
+        // Volumen: label + filesystem.
+        let mut label_buf = [0u16; 256];
+        let mut fs_buf = [0u16; 64];
+        let mut serial: u32 = 0;
+        let mut max_component: u32 = 0;
+        let mut fs_flags: u32 = 0;
+        let vol_ok = unsafe {
+            GetVolumeInformationW(
+                pcwstr,
+                Some(&mut label_buf),
+                Some(&mut serial),
+                Some(&mut max_component),
+                Some(&mut fs_flags),
+                Some(&mut fs_buf),
+            )
+        }
+        .is_ok();
+
+        let label = if vol_ok { wide_to_string(&label_buf) } else { String::new() };
+        let filesystem = if vol_ok { wide_to_string(&fs_buf) } else { String::new() };
+
+        // Tamaños.
+        let mut free_bytes_available: u64 = 0;
+        let mut total_bytes: u64 = 0;
+        let cap_ok = unsafe {
+            GetDiskFreeSpaceExW(
+                pcwstr,
+                Some(&mut free_bytes_available),
+                Some(&mut total_bytes),
+                None,
+            )
+        }
+        .is_ok();
+
+        // is_ready: GetVolumeInformation + GetDiskFreeSpaceEx ambos OK.
+        let is_ready = vol_ok && cap_ok;
+
+        out.push(DriveListing {
+            letter: letter_char.to_string(),
+            root_path,
+            label,
+            filesystem,
+            drive_type,
+            total_bytes: if cap_ok { total_bytes } else { 0 },
+            free_bytes: if cap_ok { free_bytes_available } else { 0 },
+            is_ready,
+        });
+    }
+
+    Ok(out)
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn enumerate_drives() -> AppResult<Vec<crate::models::disk::DriveListing>> {
+    Ok(Vec::new())
+}
+
+/// Devuelve (total_bytes, free_bytes) del drive que contiene `root`.
+/// Best-effort: si falla, devuelve `None`.
+#[cfg(target_os = "windows")]
+pub fn drive_capacity_and_free(root: &str) -> Option<(u64, u64)> {
+    use windows::core::PCWSTR;
+    use windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+
+    // Asegurarse de tener forma "X:\\".
+    let normalized = if root.len() >= 2 && root.as_bytes()[1] == b':' {
+        format!("{}:\\", &root[..1])
+    } else {
+        root.to_string()
+    };
+    let wide: Vec<u16> = normalized
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+    let mut free: u64 = 0;
+    let mut total: u64 = 0;
+    unsafe {
+        GetDiskFreeSpaceExW(PCWSTR(wide.as_ptr()), Some(&mut free), Some(&mut total), None)
+            .ok()?;
+    }
+    Some((total, free))
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn drive_capacity_and_free(_root: &str) -> Option<(u64, u64)> {
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn wide_to_string(buf: &[u16]) -> String {
+    let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
+    String::from_utf16_lossy(&buf[..len])
+}
+
 /// Devuelve (bytes_lógicos, archivos, directorios) recorriendo `root`.
 /// No sigue symlinks ni junctions por defecto.
 pub fn directory_stats(root: &Path, follow_reparse_points: bool) -> AppResult<(u64, u64, u64)> {

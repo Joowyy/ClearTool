@@ -22,40 +22,38 @@ export interface SystemSummary {
   drives: DriveInfo[];
 }
 
-export type SizeStrategy = "Logical" | "Physical" | "Lazy";
 export type NodeKind = "Dir" | "File" | "Symlink" | "Junction";
 
-export interface ScanTreeInput {
-  root: string;
-  maxDepth: number;
-  followReparsePoints: boolean;
-  includeHidden: boolean;
-  minSizeBytes: number | null;
-  sizeStrategy: SizeStrategy;
+export type DriveType =
+  | "fixed"
+  | "removable"
+  | "network"
+  | "cdRom"
+  | "ramDisk"
+  | "unknown";
+
+export interface DriveListing {
+  letter: string;
+  rootPath: string;
+  label: string;
+  filesystem: string;
+  driveType: DriveType;
+  totalBytes: number;
+  freeBytes: number;
+  isReady: boolean;
 }
 
-export interface ScanTreeHandle {
-  scanId: string;
-}
-
-export interface TreeNode {
-  path: string;
-  name: string;
-  kind: NodeKind;
-  sizeBytes: number;
-  lastModified: string | null;
-  childrenCount: number | null;
-  isProtected: boolean;
-  error: string | null;
-}
-
-export interface DirectorySize {
-  path: string;
-  logicalBytes: number;
-  physicalBytes: number;
-  fileCount: number;
-  dirCount: number;
-}
+export type ExtCategory =
+  | "media"
+  | "image"
+  | "code"
+  | "docs"
+  | "archive"
+  | "executable"
+  | "database"
+  | "font"
+  | "threeD"
+  | "other";
 
 export interface TreemapNode {
   name: string;
@@ -63,14 +61,93 @@ export interface TreemapNode {
   sizeBytes: number;
   kind: NodeKind;
   extension: string | null;
+  fileCount: number;
+  dirCount: number;
+  lastModified: string | null;
+  percentOfParent: number;
+  percentOfRoot: number;
   children: TreemapNode[];
+  truncated: boolean;
+  error: string | null;
 }
 
 export interface BuildTreemapInput {
   root: string;
-  maxDepth?: number;
+  scanId: string;
+  maxDepthEmit?: number;
   minSizeMb?: number;
   followReparsePoints?: boolean;
+  includeHidden?: boolean;
+  includeSystem?: boolean;
+}
+
+export interface ExtensionStat {
+  extension: string;
+  category: ExtCategory;
+  bytes: number;
+  fileCount: number;
+  percent: number;
+}
+
+export interface FolderStat {
+  path: string;
+  name: string;
+  bytes: number;
+  fileCount: number;
+  percent: number;
+}
+
+export interface FileStat {
+  path: string;
+  name: string;
+  bytes: number;
+  extension: string | null;
+  lastModified: string | null;
+}
+
+export interface AgeBucket {
+  bytes: number;
+  fileCount: number;
+}
+
+export interface AgeDistribution {
+  last7Days: AgeBucket;
+  last30Days: AgeBucket;
+  last90Days: AgeBucket;
+  last1Year: AgeBucket;
+  last5Years: AgeBucket;
+  older: AgeBucket;
+}
+
+export interface DiskAnalysisReport {
+  scanId: string;
+  root: string;
+  scannedAt: string;
+  durationMs: number;
+  totalBytes: number;
+  totalFiles: number;
+  totalDirs: number;
+  freeBytes: number;
+  driveTotalBytes: number;
+  topExtensions: ExtensionStat[];
+  largestFolders: FolderStat[];
+  largestFiles: FileStat[];
+  ageDistribution: AgeDistribution;
+  errors: string[];
+}
+
+export interface DiskAnalysisResult {
+  report: DiskAnalysisReport;
+  root: TreemapNode;
+}
+
+export interface DiskScanProgressPayload {
+  scanId: string;
+  bytesScanned: number;
+  filesScanned: number;
+  dirsScanned: number;
+  currentPath: string;
+  elapsedMs: number;
 }
 
 export interface CacheLocation {

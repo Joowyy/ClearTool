@@ -19,7 +19,6 @@ import {
   HardDrive,
   Shield,
   Sliders,
-  FolderTree,
   Home,
   FileText,
   Zap,
@@ -44,13 +43,6 @@ function usePaletteActions() {
       icon: Home,
       group: "Navegar",
       run: () => navigate(ROUTES.HOME),
-    },
-    {
-      id: "nav-explorer",
-      label: "Ir a Explorador",
-      icon: FolderTree,
-      group: "Navegar",
-      run: () => navigate(ROUTES.EXPLORER),
     },
     {
       id: "nav-cache",

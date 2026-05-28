@@ -4,7 +4,7 @@
 // (ver src-tauri/src/ipc/*.rs). El payload de cada evento se declara en
 // `EventPayloads` para que `useTauriEvent` pueda inferirlo.
 
-import type { TreeNode } from "./types";
+import type { DiskScanProgressPayload } from "./types";
 
 export interface CacheDebugPayload {
   level: string;
@@ -97,25 +97,27 @@ export interface CacheStartedPayload {
 }
 
 export const TauriEvents = {
-  ExplorerNode: "explorer:node",
-  ExplorerDone: "explorer:done",
   CacheDebug: "cache:debug",
   CacheLine: "cache:line",
   CacheProgressV2: "cache:progress-v2",
   CachePhase: "cache:phase",
   CacheSummary: "cache:summary",
   CacheStarted: "cache:started",
+  DiskProgress: "disk:progress",
+  DiskComplete: "disk:complete",
+  DiskError: "disk:error",
 } as const;
 
 export type TauriEventName = (typeof TauriEvents)[keyof typeof TauriEvents];
 
 export interface EventPayloads {
-  "explorer:node": TreeNode;
-  "explorer:done": string;
   "cache:debug": CacheDebugPayload;
   "cache:line": CleanLogLinePayload;
   "cache:progress-v2": CleanProgressV2Payload;
   "cache:phase": CleanPhasePayload;
   "cache:summary": CleanSummaryPayload;
   "cache:started": CacheStartedPayload;
+  "disk:progress": DiskScanProgressPayload;
+  "disk:complete": { scanId: string };
+  "disk:error": { scanId: string; error: string };
 }

@@ -1,6 +1,5 @@
 export const ROUTES = {
   HOME: "/",
-  EXPLORER: "/explorer",
   CACHE: "/cache",
   DEBLOAT: "/debloat",
   SERVICES: "/services",

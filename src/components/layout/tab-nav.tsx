@@ -10,7 +10,6 @@ import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Activity,
-  FolderTree,
   Trash2,
   Package,
   Settings2,
@@ -32,7 +31,6 @@ type TabItem = {
 
 const TABS: TabItem[] = [
   { to: ROUTES.HOME, label: "Inicio", icon: Activity },
-  { to: ROUTES.EXPLORER, label: "Explorador", icon: FolderTree },
   { to: ROUTES.CACHE, label: "Caché", icon: Trash2 },
   { to: ROUTES.DEBLOAT, label: "Debloat", icon: Package },
   { to: ROUTES.SERVICES, label: "Servicios", icon: Settings2 },

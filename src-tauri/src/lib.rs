@@ -81,11 +81,6 @@ pub fn run() {
             ipc::system_info::app_version,
             // telemetry (monitorización en vivo)
             ipc::telemetry::get_telemetry_snapshot,
-            // explorer
-            ipc::explorer::scan_tree,
-            ipc::explorer::list_dir,
-            ipc::explorer::cancel_scan,
-            ipc::explorer::compute_directory_size,
             // cache
             ipc::cache::list_cache_locations,
             ipc::cache::scan_cache_locations,
@@ -143,7 +138,9 @@ pub fn run() {
             ipc::startup::disable_startup,
             ipc::startup::enable_startup,
             // disk analyzer
+            ipc::disk::list_drives,
             ipc::disk::build_treemap_data,
+            ipc::disk::cancel_disk_scan,
             // network utilities
             ipc::network::flush_dns,
             ipc::network::renew_ip,

@@ -18,7 +18,8 @@ import type {
   CleanResidualsReport,
   CreateRestorePointInput,
   DetectedPackage,
-  DirectorySize,
+  DiskAnalysisResult,
+  DriveListing,
   ExecutePlanOpts,
   InstalledApp,
   LockingProcess,
@@ -31,12 +32,8 @@ import type {
   ResidualHints,
   RestorePoint,
   RestoreReport,
-  ScanTreeHandle,
-  ScanTreeInput,
   SelectedResiduals,
   StartupEntry,
-  TreemapNode,
-  TreeNode,
   Service,
   Settings,
   SystemSummary,
@@ -79,19 +76,19 @@ async function initInvoke(): Promise<void> {
           gpu_usage: 10,
           processes_count: 120,
         },
-        scan_tree: {
-          handle: "mock-handle",
-          root: null,
-          total_nodes: 0,
-          scanned_nodes: 0,
-        },
-        list_dir: [],
-        cancel_scan: undefined,
-        compute_directory_size: {
-          path: "",
-          size_bytes: 0,
-          file_count: 0,
-        },
+        list_drives: [
+          {
+            letter: "C",
+            rootPath: "C:\\",
+            label: "OS",
+            filesystem: "NTFS",
+            driveType: "fixed",
+            totalBytes: 1_000_204_886_016,
+            freeBytes: 213_500_000_000,
+            isReady: true,
+          },
+        ],
+        cancel_disk_scan: undefined,
         list_cache_locations: [],
         scan_cache_locations: [],
         clean_cache_locations: {
@@ -200,12 +197,44 @@ async function initInvoke(): Promise<void> {
         disable_startup: undefined,
         enable_startup: undefined,
         build_treemap_data: {
-          name: "C:\\",
-          path: "C:\\",
-          sizeBytes: 0,
-          kind: "Dir",
-          extension: null,
-          children: [],
+          report: {
+            scanId: "",
+            root: "C:\\",
+            scannedAt: new Date().toISOString(),
+            durationMs: 0,
+            totalBytes: 0,
+            totalFiles: 0,
+            totalDirs: 0,
+            freeBytes: 0,
+            driveTotalBytes: 0,
+            topExtensions: [],
+            largestFolders: [],
+            largestFiles: [],
+            ageDistribution: {
+              last7Days: { bytes: 0, fileCount: 0 },
+              last30Days: { bytes: 0, fileCount: 0 },
+              last90Days: { bytes: 0, fileCount: 0 },
+              last1Year: { bytes: 0, fileCount: 0 },
+              last5Years: { bytes: 0, fileCount: 0 },
+              older: { bytes: 0, fileCount: 0 },
+            },
+            errors: [],
+          },
+          root: {
+            name: "C:\\",
+            path: "C:\\",
+            sizeBytes: 0,
+            kind: "Dir",
+            extension: null,
+            fileCount: 0,
+            dirCount: 0,
+            lastModified: null,
+            percentOfParent: 100,
+            percentOfRoot: 100,
+            children: [],
+            truncated: false,
+            error: null,
+          },
         },
         flush_dns: undefined,
         renew_ip: undefined,
@@ -250,19 +279,6 @@ export const appVersion = () => invoke<{ version: string; buildDate: string; git
 // ── telemetry (CPU/RAM/GPU/procesos) ─────────────────────────────────────
 export const getTelemetrySnapshot = () =>
   invoke<TelemetrySnapshot>("get_telemetry_snapshot");
-
-// ── explorer ────────────────────────────────────────────────────────────
-export const scanTree = (input: ScanTreeInput) =>
-  invoke<ScanTreeHandle>("scan_tree", { input });
-
-export const listDir = (path: string, followReparsePoints = false) =>
-  invoke<TreeNode[]>("list_dir", { path, followReparsePoints });
-
-export const cancelScan = (handle: ScanTreeHandle) =>
-  invoke<void>("cancel_scan", { handle });
-
-export const computeDirectorySize = (path: string, followReparsePoints: boolean) =>
-  invoke<DirectorySize>("compute_directory_size", { path, followReparsePoints });
 
 // ── cache ───────────────────────────────────────────────────────────────
 export const listCacheLocations = () =>
@@ -383,8 +399,13 @@ export const disableStartup = (id: string) => invoke<void>("disable_startup", { 
 export const enableStartup = (id: string) => invoke<void>("enable_startup", { id });
 
 // ── disk analyzer ───────────────────────────────────────────────────────
+export const listDrives = () => invoke<DriveListing[]>("list_drives");
+
 export const buildTreemapData = (input: BuildTreemapInput) =>
-  invoke<TreemapNode>("build_treemap_data", { input });
+  invoke<DiskAnalysisResult>("build_treemap_data", { input });
+
+export const cancelDiskScan = (scanId: string) =>
+  invoke<void>("cancel_disk_scan", { scanId });
 
 // ── network utilities ───────────────────────────────────────────────────
 export const flushDns = (dryRun: boolean) => invoke<void>("flush_dns", { dryRun });

@@ -32,11 +32,6 @@ const SHORTCUTS: (navigate: ReturnType<typeof useNavigate>, toggleShortcutsModal
     handler: () => navigate(ROUTES.SETTINGS),
   },
   {
-    key: "e",
-    ctrl: true,
-    handler: () => navigate(ROUTES.EXPLORER),
-  },
-  {
     key: "b",
     ctrl: true,
     handler: () => navigate(ROUTES.DEBLOAT),

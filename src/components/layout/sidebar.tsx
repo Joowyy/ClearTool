@@ -8,7 +8,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  FolderTree,
   Trash2,
   Package,
   Settings2,
@@ -37,7 +36,6 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { to: ROUTES.HOME, label: "Inicio", icon: Home },
-  { to: ROUTES.EXPLORER, label: "Explorador", icon: FolderTree },
   { to: ROUTES.CACHE, label: "Caché", icon: Trash2 },
   { to: ROUTES.DEBLOAT, label: "Debloat", icon: Package },
   { to: ROUTES.SERVICES, label: "Servicios", icon: Settings2 },

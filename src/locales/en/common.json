@@ -5,7 +5,6 @@
   },
   "nav": {
     "home": "Home",
-    "explorer": "Explorer",
     "cache": "Cache",
     "debloat": "Debloat",
     "services": "Services",
